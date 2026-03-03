@@ -166,7 +166,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 <body>
 
 <div class="topbar">
-  <div class="logo">&#x1F6CD; ShopVN</div>
+  <div class="logo">&#x1F6CD; KhoaOngNghiem Tech</div>
   <div class="tr">
     <img class="tav" src="<?= htmlspecialchars($avSrc) ?>" alt="">
     <span><?= htmlspecialchars($user['TenDangNhap']) ?></span>
