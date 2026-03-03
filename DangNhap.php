@@ -103,7 +103,7 @@ if (isset($_POST['login'])) {
                     
                 </div>
                 <div class="duoinua">
-                    <a class="hoac1" href="DangKy.php">Tạo Tài Khoản mới</a>
+                    <a class="hoac1" href="DangKy.php">Tạo Tài Khoản mới asdas</a>
                 </div>
 
 
