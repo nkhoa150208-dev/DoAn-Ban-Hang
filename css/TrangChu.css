@@ -1,0 +1,271 @@
+*{
+    margin: 0px;
+    padding: 0px;
+}
+
+p.Nhapmk3l {
+    display: flex;
+    justify-content: center;
+    position: relative;
+    top: -180px;
+    color: red;
+    font-size: 28px;
+}
+
+p.Nhapmk3l {}
+
+form {}
+
+button.hoac1 {
+    olor: white;
+    text-decoration: none;
+    width: 300px;
+    height: 30px;
+    border: 1px solid black;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #60c946;
+}
+
+.cumtren {
+    display: flex;
+    width: 400px;
+    justify-content: space-between;
+}
+
+p.sinon {
+    color: #0019ff;
+}
+
+.nonn {
+    margin-left: 10px;
+}
+
+.conmat {
+    position: absolute;
+    left: 276px;
+    top: 3px;
+}
+
+img.mat {
+    width: 25px;
+    height: 27px;
+    position: absolute;
+}
+
+.trenmk {
+    position: relative;
+    display: flex;
+}
+
+.trentk {
+    \: absolute;
+    position: relative;
+}
+
+.duoinua {
+    padding-top: 20px;
+}
+
+div {}
+
+.Tren1 {
+    height: 70px;
+}
+
+.Tren1 {}
+
+.Giua {
+}
+
+.mattat {}
+
+p.Hoac {
+    color: #8f8f8f;
+}
+
+.gachngang {
+    height: 1px;
+    background: #8f8f8f;
+    width: 125px;
+}
+
+.hoac {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    width: 300px;
+    justify-content: space-between;
+}
+
+a.hoac1 {
+    color: white;
+    text-decoration: none;
+    width: 300px;
+    height: 30px;
+    border: 1px solid black;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #60c946;
+}
+.khung{
+    width: 400px;
+    height: 30px;
+    border: 1px solid black;
+    border-radius: 5px;
+}
+
+.TenDY {
+    width: 180px;
+    height: 30px;
+    border: 1px solid black;
+    border-radius: 5px;
+}
+button.dnxduong {
+    color: white;
+    text-decoration: none;
+    width: 300px;
+    height: 30px;
+    border: 1px solid black;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #2fa8f1;
+}
+
+.Duoi {
+    width: 300px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+
+
+a {
+}
+
+.MatKhau {
+    width: 180px;
+    height: 30px;
+    border: 1px solid black;
+    border-radius: 5px;
+}
+
+input.TenDN {
+    width: 300px;
+    height: 30px;
+    border: 1px solid black;
+    border-radius: 5px;
+}
+
+.Tren {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 300px;
+    justify-content: space-evenly;
+    position: relative;
+}
+
+.KhungDN {
+    width: 500px;
+    height: 500px;
+    border: 1px solid black;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+}
+
+.KhungTong {
+    width: auto;
+    height: 530px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+input.TimKiem {
+    border: 1px solid black;
+    border-radius: 3px;
+    width: 500px;
+    height: 30px;
+}
+
+.NoiDung1 {
+    display: flex;
+    width: 220px;
+    justify-content: space-evenly;
+}
+
+.ChuaNoiDungMenu {
+    display:  flex;
+    height: 80px;
+    width: auto;
+    align-items: center;
+    justify-content: center;
+    padding-left: 12px;
+}
+
+.KhungMenu {
+    width: auto;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #7575ff;
+}
+
+.NoiDung {
+    width: auto;
+    height: auto;
+    display: flex;
+    align-items: center;
+    padding-left: 12px;
+    padding-right: 12px;
+}.Logo{
+    width: 60px;
+    height: 60px;
+}
+.input-star {
+   
+    width: 300px;
+    height: 30px;
+    border: 1px solid black;
+    border-radius: 5px;
+}
+.tat{
+        width: 25px;
+        height: 27px;
+        position: absolute;
+        visibility: hidden;
+}
+.hien{
+        width: 25px;
+        height: 27px;
+        visibility: visible;
+}
+.saithontinh {
+    color: red;
+    font-size: 14px;
+    margin-top: 5px;
+}
+.an{
+      visibility: hidden;
+}
+.formdky{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+   
+}
