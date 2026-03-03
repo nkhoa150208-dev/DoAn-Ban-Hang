@@ -2,7 +2,7 @@
 <html lang="vi">
     <head>
         <meta charset="UTF-8">
-        <title>lol</title>
+        <title>DO AN</title>
         <link rel="stylesheet" href="css/TrangChu.css">
         <link rel="stylesheet" href="Image">
     </head>
