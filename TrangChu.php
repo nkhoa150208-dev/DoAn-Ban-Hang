@@ -1032,6 +1032,7 @@ document.querySelectorAll('.btn-add').forEach(btn => {
   });
 });
 </script>
+
 <script src="js/trangchu.js"></script>
 </body>
 </html>
