@@ -43,7 +43,7 @@ if (isset($_SESSION['success'])) {
             
 
 
-    <button class="hoac1" type="submit">Đăng Ký tiền ngu</button>
+    <button class="hoac1" type="submit">Đăng Ký</button>
 </form>
 
                

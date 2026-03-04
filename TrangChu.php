@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tiền Ngu — Đồ Công Nghệ Fake</title>
+<title>KhoaOngNghiem TechVN</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Exo+2:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="css/trangchu.css" rel="stylesheet">
 </head>
@@ -11,7 +11,7 @@
 
 <!-- NAV -->
 <nav>
-  <a class="logo" href="#"><span>Tiền</span><span> Store </span></a>
+  <a class="logo" href="#"><span>KhoaOngNghiem</span><span> TechVN </span></a>
   <div class="nav-links">
     <a href="#" class="active">Trang Chủ</a>
     <a href="#categories">Sản Phẩm</a>
