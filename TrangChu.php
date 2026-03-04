@@ -586,7 +586,11 @@
       Giỏ Hàng
       <span class="cart-badge">3</span>
     </button>
+     <form action="DangNhap.php" method="POST">
     <button class="btn-login">Đăng Nhập</button>
+   
+    </form>
+    
   </div>
 </nav>
 
