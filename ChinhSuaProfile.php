@@ -10,8 +10,8 @@ $connectionInfo = ["Database"=>"QLBanHang","TrustServerCertificate"=>true,"Chara
 $conn = sqlsrv_connect($serverName, $connectionInfo);
 if ($conn === false) die(print_r(sqlsrv_errors(), true));
 
-if (!isset($_SESSION['user_id'])) $_SESSION['user_id'] = 1;
-$user_id = (int)$_SESSION['user_id'];
+if (!isset($_SESSION['MaND'])) { header('Location: DangNhap.php'); exit; }
+$user_id = (int)$_SESSION['MaND'];
 
 $uploadPath = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'avatars';
 if (!file_exists($uploadPath)) {
@@ -61,13 +61,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = "Chi nhan JPG/PNG/GIF/WEBP.";
             } else {
                 $ext  = pathinfo($f['name'], PATHINFO_EXTENSION);
-                $dest = UPLOAD_DIR.'av_'.$user_id.'_'.time().'.'.$ext;
+                $dest     = UPLOAD_DIR . 'av_' . $user_id . '_' . time() . '.' . $ext;
+                $destWeb  = 'uploads/avatars/' . 'av_' . $user_id . '_' . time() . '.' . $ext;
                 if (move_uploaded_file($f['tmp_name'], $dest)) {
                     $old = sqlsrv_query($conn,"SELECT Avatar FROM dbo.NguoiDung WHERE MaND=?",[$user_id]);
                     if ($old && $row = sqlsrv_fetch_array($old, SQLSRV_FETCH_ASSOC)) {
                         if (!empty($row['Avatar']) && file_exists($row['Avatar'])) unlink($row['Avatar']);
                     }
-                    $up = sqlsrv_query($conn,"UPDATE dbo.NguoiDung SET Avatar=? WHERE MaND=?",[$dest,$user_id]);
+                    $up = sqlsrv_query($conn,"UPDATE NguoiDung SET Avatar=? WHERE MaND=?",[$destWeb,$user_id]);
                     if ($up) $success = "avatar";
                     else $error = "Loi luu avatar vao DB.";
                 } else { $error = "Khong the luu file. Kiem tra quyen thu muc uploads/."; }
@@ -89,7 +90,7 @@ $avSrc = (!empty($user['Avatar']) && file_exists($user['Avatar']))
     ? $user['Avatar']
     : 'https://ui-avatars.com/api/?name='.urlencode($user['HoTen']).'&background=6366f1&color=fff&size=200';
 
-$vMap  = [0=>'Khach hang',1=>'Nhan vien',2=>'Quan tri vien'];
+$vMap = [0=>'Khach hang', 1=>'Quan tri vien'];
 $vTxt  = $vMap[$user['VaiTro']] ?? 'Khach hang';
 $sMsg  = $success==='info' ? 'Cap nhat thong tin thanh cong!' : ($success==='avatar' ? 'Cap nhat anh dai dien thanh cong!' : '');
 ?>
@@ -458,17 +459,21 @@ body {
         </div>
       </form>
     </div>
-
     <div class="card">
       <nav class="snav">
         <a href="ChinhSuaProfile.php" class="ni act">👤 Ho so ca nhan</a>
         <a href="DonHang.php" class="ni">📦 Don hang cua toi</a>
         <a href="YeuThich.php" class="ni">❤️ San pham yeu thich</a>
         <a href="DiaChi.php" class="ni">🏠 Dia chi giao hang</a>
+
+        <!-- THEM DOAN NAY -->
+        <?php if ($user['VaiTro'] == 1): ?>
+        <a href="QuanLyNguoiDung.php" class="ni">&#x1F6E1; Quan ly nguoi dung</a>
+        <?php endif; ?>
+
         <a href="DangXuat.php" class="ni" style="color:#ef4444">🚪 Dang xuat</a>
       </nav>
     </div>
-
   </aside>
 
   <main>
