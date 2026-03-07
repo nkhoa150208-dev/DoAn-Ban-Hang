@@ -7,7 +7,6 @@ session_start();
         <meta charset="UTF-8">
         <title>đồ án</title>
         <link rel="stylesheet" href="css/TrangChu.css">
-        <link rel="stylesheet" href="Image">
         <script src="TrangChu.js"></script>
        
     </head>
@@ -15,7 +14,7 @@ session_start();
         <div class="KhungTong">
             <div class="KhungDN">
                 <div class="Tren1">
-                    <p class="Nhapmk3l">Nhập mật khẩu 3 Lớp</p>
+                    <p class="Nhapmk3">Nhập mật khẩu 3 Lớp</p>
                     <form action="" method="POST"> <div class="trentk">
            <input class="TenDN"  maxlength="4" name="txtmk3lop" type="text" placeholder="Nhập mật khẩu 3 lớp" required>
         </div>

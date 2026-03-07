@@ -1,0 +1,144 @@
+/* nền trang */
+body{
+margin:0;
+font-family:Arial, Helvetica, sans-serif;
+background:linear-gradient(90deg,#031a33,#02213f,#031a33);
+height:100vh;
+display:flex;
+justify-content:center;
+align-items:center;
+}
+
+/* khung tổng */
+.KhungTong{
+width:100%;
+display:flex;
+justify-content:center;
+}
+
+/* khung form */
+.KhungDN{
+width:500px;
+background:#16324f;
+padding:40px;
+border-radius:20px;
+box-shadow:0 0 30px rgba(0,0,0,0.5);
+}
+
+/* form */
+.formdky{
+display:flex;
+flex-direction:column;
+}
+
+/* hàng đầu */
+.cumtren{
+display:flex;
+gap:15px;
+margin-bottom:12px;
+}
+
+
+
+/* placeholder */
+.khung::placeholder{
+opacity:0.6;
+}
+
+/* focus input */
+.khung:focus{
+outline:none;
+background:white;
+box-shadow:0 0 5px #4da3ff;
+}
+/* ô tên đăng nhập */
+.cumtren .TenDN{
+    flex:1;
+}
+/* mật khẩu */
+.trenmk{
+    position:relative;
+    flex:1;
+    width:100%;
+}
+/* input chung */
+.khung{
+width:100%;
+padding:12px;
+border:none;
+border-radius:6px;
+background:#d9d9d9;
+font-size:14px;
+box-sizing:border-box;
+padding-right:35px;
+margin-bottom:12px;
+}
+/* icon mắt */
+.conmat{
+    position:absolute;
+    right: 32px;
+    top: 13px;
+    transform:translateY(-50%);
+    display:flex;
+}
+
+.conmat img{
+    width:20px;
+    height:20px;
+    cursor:pointer;
+}
+
+.mat1,
+.mat2{
+    position:absolute;
+    
+}
+
+/* nút đăng ký */
+.hoac1{
+margin-top:10px;
+padding:12px;
+border:none;
+border-radius:6px;
+background:#59c152;
+color:white;
+font-size:16px;
+cursor:pointer;
+transition:0.3s;
+}
+
+.hoac1:hover{
+background:#49a845;
+}
+
+/* phần dưới */
+.Duoi{
+text-align:right;
+margin-top:10px;
+}
+
+/* link đăng nhập */
+.hoac2{
+color:white;
+text-decoration:none;
+font-size:14px;
+opacity:0.7;
+}
+
+.hoac2:hover{
+text-decoration:underline;
+}
+
+/* thông báo */
+.thongbao{
+text-align:center;
+margin-bottom:10px;
+}
+
+.loi{
+color:red;
+}
+
+.dung{
+color:#4CAF50;
+}
