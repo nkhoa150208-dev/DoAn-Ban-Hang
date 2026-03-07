@@ -631,7 +631,7 @@
     <div class="hero-devices">
       <div class="device-glow"></div>
       <!-- Main laptop -->
-      <div class="device-card" style="width:220px;height:160px;left:22%;top:15%">
+      <div class="device-card" style="width:220px;height:160px;left:22%;top:10%">
         <div class="dc-inner">
           <div class="dc-icon">💻</div>
           <div class="dc-name">LAPTOP ROG</div>
@@ -639,7 +639,7 @@
         </div>
       </div>
       <!-- Phone -->
-      <div class="device-card" style="width:130px;height:110px;right:0;top:10px">
+      <div class="device-card" style="width:130px;height:130px;right:0;top:10px">
         <div class="dc-inner">
           <div class="dc-icon">📱</div>
           <div class="dc-name">iPhone 15 Pro</div>
@@ -647,7 +647,7 @@
         </div>
       </div>
       <!-- Headphone -->
-      <div class="device-card" style="width:130px;height:110px;left:0;bottom:20px">
+      <div class="device-card" style="width:130px;height:130px;left:0;bottom:20px">
         <div class="dc-inner">
           <div class="dc-icon">🎧</div>
           <div class="dc-name">Gaming Headset</div>
@@ -655,7 +655,7 @@
         </div>
       </div>
       <!-- Mouse -->
-      <div class="device-card" style="width:120px;height:100px;right:10px;bottom:10px">
+      <div class="device-card" style="width:120px;height:130px;right:10px;bottom:10px">
         <div class="dc-inner">
           <div class="dc-icon">🖱️</div>
           <div class="dc-name">Logitech G Pro</div>

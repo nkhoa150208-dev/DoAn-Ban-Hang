@@ -571,6 +571,32 @@ session_start();
     .features-grid { grid-template-columns: 1fr; }
     .footer-grid { grid-template-columns: 1fr 1fr; }
   }
+  .tav{
+  width:36px;
+  height:36px;
+  border-radius:50%;
+  object-fit:cover;
+  border:none;
+  transition:0.3s;
+  border: 2px solid var(--cyan);
+}
+
+.tav:hover{
+  transform:scale(1.08);
+}
+.tr{
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--muted);
+    overflow:hidden;
+    background:#031a33;
+  }
+.sinon{
+  text-align: center;
+}
 </style>
 <body>
 
@@ -595,18 +621,17 @@ session_start();
     </button>
     <form action="ChinhSuaProfile.php" method="POST">
         <button class="NoiDung1">
-
-        
-     
-<div class="nonn">
-    <p class="sinon">
-    <?php echo $_SESSION['TenDangNhap']; ?>
-</p>
-</div>
 <div class="tr">
     <img class="tav" src="https://ui-avatars.com/api/?name=Qu%E1%BA%A3n+tr%E1%BB%8B+vi%C3%AAn&amp;background=6366f1&amp;color=fff&amp;size=200" alt="">
+  <p class="sinon">
+      <?php echo $_SESSION['TenDangNhap']; ?>
+    </p>
+  
   </div>
+  
   </button>
+    
+    
   </form>
 </nav>
 
@@ -647,7 +672,7 @@ session_start();
     <div class="hero-devices">
       <div class="device-glow"></div>
       <!-- Main laptop -->
-      <div class="device-card" style="width:220px;height:160px;left:22%;top:15%">
+      <div class="device-card" style="width:220px;height:160px;left:22%;top:10%">
         <div class="dc-inner">
           <div class="dc-icon">💻</div>
           <div class="dc-name">LAPTOP ROG</div>
@@ -655,7 +680,7 @@ session_start();
         </div>
       </div>
       <!-- Phone -->
-      <div class="device-card" style="width:130px;height:110px;right:0;top:10px">
+      <div class="device-card" style="width:130px;height:130px;right:0;top:10px">
         <div class="dc-inner">
           <div class="dc-icon">📱</div>
           <div class="dc-name">iPhone 15 Pro</div>
@@ -663,7 +688,7 @@ session_start();
         </div>
       </div>
       <!-- Headphone -->
-      <div class="device-card" style="width:130px;height:110px;left:0;bottom:20px">
+      <div class="device-card" style="width:130px;height:130px;left:0;bottom:20px">
         <div class="dc-inner">
           <div class="dc-icon">🎧</div>
           <div class="dc-name">Gaming Headset</div>
@@ -671,7 +696,7 @@ session_start();
         </div>
       </div>
       <!-- Mouse -->
-      <div class="device-card" style="width:120px;height:100px;right:10px;bottom:10px">
+      <div class="device-card" style="width:120px;height:130px;right:10px;bottom:10px">
         <div class="dc-inner">
           <div class="dc-icon">🖱️</div>
           <div class="dc-name">Logitech G Pro</div>
