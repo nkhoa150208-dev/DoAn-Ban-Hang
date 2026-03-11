@@ -14,7 +14,9 @@ define('UPLOAD_DIR', $uploadPath . DIRECTORY_SEPARATOR);
 ?>
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>KhoaOngNghiem TechVN</title>
@@ -389,6 +391,7 @@ define('UPLOAD_DIR', $uploadPath . DIRECTORY_SEPARATOR);
     content: ''; position: absolute; inset: 0; border-radius: 16px;
     box-shadow: inset 0 0 0 1px var(--cyan);
     opacity: 0; transition: opacity 0.3s;
+    pointer-events: none; /* THÊM DÒNG NÀY ĐỂ CHO PHÉP BẤM XUYÊN QUA */
   }
   .product-card:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 30px rgba(0,229,255,0.1); }
   .product-card:hover::after { opacity: 1; }
@@ -620,11 +623,13 @@ define('UPLOAD_DIR', $uploadPath . DIRECTORY_SEPARATOR);
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
     <input type="text" placeholder="Tìm kiếm sản phẩm...">
   </div>
+  
   <div class="nav-actions">
-    <button class="btn-cart">
+    
+   <button class="btn-cart" onclick="window.location.href='ChiTietGioHang.php'">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
       Giỏ Hàng
-      <span class="cart-badge">3</span>
+      <span class="cart-badge" id="so-luong-gio-hang">0</span>
     </button>
     <form action="ChinhSuaProfile.php" method="POST">
         <button class="NoiDung1">
@@ -749,7 +754,43 @@ define('UPLOAD_DIR', $uploadPath . DIRECTORY_SEPARATOR);
     </div>
   </div>
 </section>
+<script>
+function themVaoGio(maSP, buttonElement) {
+    // 1. Chuông báo: Bấm phát phải hiện thông báo này ngay!
+    alert("Đã bấm nút! Đang chuẩn bị thêm sản phẩm mã số: " + maSP);
 
+    // 2. Kiểm tra nếu quên chữ 'this'
+    if(!buttonElement) {
+        alert("Lỗi: Nút HTML đang viết thiếu chữ 'this'!");
+        return;
+    }
+
+    // 3. Tiến hành gửi AJAX ngầm
+    $.ajax({
+        url: "them_gio_hang.php",
+        type: "POST",
+        data: { id_sanpham: maSP },
+        success: function(response) {
+            // Cập nhật số trên giỏ hàng
+            $("#so-luong-gio-hang").text(response);
+            
+            // Đổi màu nút thành xanh lá
+            let oldText = buttonElement.innerHTML;
+            buttonElement.innerHTML = '✓ Đã thêm!';
+            buttonElement.style.background = '#059669'; 
+            
+            // Trả lại nút cũ sau 1.5 giây
+            setTimeout(() => { 
+                buttonElement.innerHTML = oldText; 
+                buttonElement.style.background = ''; 
+            }, 1500);
+        },
+        error: function(xhr, status, error) {
+            alert("Lỗi AJAX: Không gọi được file PHP!");
+        }
+    });
+}
+</script>
 <!-- PRODUCTS -->
 <section class="products" id="products">
   <div class="section-header fade-in">
@@ -766,164 +807,74 @@ define('UPLOAD_DIR', $uploadPath . DIRECTORY_SEPARATOR);
     <button class="filter-btn">Gaming Gear</button>
   </div>
   <div class="products-grid">
-    <div class="product-card fade-in d1">
-      <span class="product-badge badge-hot">HOT</span>
-      <div class="product-img-wrap"><div class="product-img">💻</div></div>
-      <div class="product-info">
-        <div class="product-cat">Laptop</div>
-        <div class="product-name">ASUS ROG Strix G16</div>
-        <div class="product-specs">i9-14900H · RTX 4070 · 16GB · 1TB</div>
-        <div class="product-price-row">
-          <div>
-            <div class="product-price">25,000,000đ</div>
-            <div class="product-price-old">29,000,000đ</div>
-          </div>
-          <div class="product-rating">★★★★★ <span style="color:var(--muted)">(128)</span></div>
+
+
+  
+    <?php
+    // 1. THÊM 3 DÒNG KẾT NỐI NÀY VÀO ĐỂ CẤP QUYỀN VÀO SQL SERVER
+
+$serverName = "localhost\\SQLEXPRESS";
+$database   = "QLBanHang";
+
+$connectionInfo = [
+    "Database" => $database,
+    "TrustServerCertificate" => true
+];
+
+$conn = sqlsrv_connect($serverName, $connectionInfo);
+
+if ($conn === false) {
+    die(print_r(sqlsrv_errors(), true));
+}
+
+    // 2. Câu lệnh lấy sản phẩm (Giữ nguyên như cũ)
+    $sql_sp = "SELECT * FROM SanPham ORDER BY MaSP DESC"; 
+    $stmt_sp = sqlsrv_query($conn, $sql_sp);
+
+    if ($stmt_sp === false) {
+        echo "Lỗi truy vấn sản phẩm: <pre>" . print_r(sqlsrv_errors(), true) . "</pre>";
+    } else {
+        // Vòng lặp in ra từng sản phẩm
+        while($row = sqlsrv_fetch_array($stmt_sp, SQLSRV_FETCH_ASSOC)) { 
+            // Xử lý thông số kỹ thuật
+            $specs = "";
+            if($row['CPU']) $specs .= $row['CPU'] . ' · ';
+            if($row['RAM']) $specs .= $row['RAM'] . ' · ';
+            if($row['O_Cung']) $specs .= $row['O_Cung'];
+            $specs = rtrim($specs, ' · '); 
+    ?>
+            
+        <div class="product-card fade-in">
+            <div class="product-img-wrap">
+                <div class="product-img">
+                    <?php echo ($row['MaDM'] == 1) ? '💻' : (($row['MaDM'] == 2) ? '📱' : '📦'); ?>
+                </div>
+            </div>
+            
+            <div class="product-info">
+                <div class="product-cat">Danh mục ID: <?php echo $row['MaDM']; ?></div>
+                <div class="product-name"><?php echo $row['TenSP']; ?></div>
+                <div class="product-specs"><?php echo $specs; ?></div>
+                
+                <div class="product-price-row">
+                    <div>
+                        <div class="product-price"><?php echo number_format($row['Gia'], 0, ',', '.'); ?>đ</div>
+                    </div>
+                </div>
+                
+                <div class="product-actions">
+                    <button class="btn-add" onclick="themVaoGio(<?php echo $row['MaSP']; ?>, this)">🛒 Thêm vào giỏ</button>
+                    <button class="btn-detail">Chi tiết</button>
+                </div>
+            </div>
         </div>
-        <div class="product-actions">
-          <button class="btn-add">🛒 Thêm vào giỏ</button>
-          <button class="btn-detail">Chi tiết</button>
-        </div>
-      </div>
-    </div>
-    <div class="product-card fade-in d2">
-      <span class="product-badge badge-new">MỚI</span>
-      <div class="product-img-wrap"><div class="product-img">📱</div></div>
-      <div class="product-info">
-        <div class="product-cat">Điện Thoại</div>
-        <div class="product-name">iPhone 15 Pro Max</div>
-        <div class="product-specs">A17 Pro · 256GB · Titanium · 5G</div>
-        <div class="product-price-row">
-          <div>
-            <div class="product-price">30,000,000đ</div>
-            <div class="product-price-old">34,000,000đ</div>
-          </div>
-          <div class="product-rating">★★★★★ <span style="color:var(--muted)">(256)</span></div>
-        </div>
-        <div class="product-actions">
-          <button class="btn-add">🛒 Thêm vào giỏ</button>
-          <button class="btn-detail">Chi tiết</button>
-        </div>
-      </div>
-    </div>
-    <div class="product-card fade-in d3">
-      <span class="product-badge badge-sale">SALE</span>
-      <div class="product-img-wrap"><div class="product-img">🎧</div></div>
-      <div class="product-info">
-        <div class="product-cat">Phụ Kiện</div>
-        <div class="product-name">Tai Nghe Gaming 7.1</div>
-        <div class="product-specs">7.1 Surround · RGB · USB · Noise Cancel</div>
-        <div class="product-price-row">
-          <div>
-            <div class="product-price">1,500,000đ</div>
-            <div class="product-price-old">2,200,000đ</div>
-          </div>
-          <div class="product-rating">★★★★☆ <span style="color:var(--muted)">(89)</span></div>
-        </div>
-        <div class="product-actions">
-          <button class="btn-add">🛒 Thêm vào giỏ</button>
-          <button class="btn-detail">Chi tiết</button>
-        </div>
-      </div>
-    </div>
-    <div class="product-card fade-in d4">
-      <div class="product-img-wrap"><div class="product-img">🖱️</div></div>
-      <div class="product-info">
-        <div class="product-cat">Gaming Gear</div>
-        <div class="product-name">Chuột Logitech G Pro X</div>
-        <div class="product-specs">25,600 DPI · Wireless · 60h · HERO Sensor</div>
-        <div class="product-price-row">
-          <div>
-            <div class="product-price">1,400,000đ</div>
-            <div class="product-price-old">1,800,000đ</div>
-          </div>
-          <div class="product-rating">★★★★★ <span style="color:var(--muted)">(312)</span></div>
-        </div>
-        <div class="product-actions">
-          <button class="btn-add">🛒 Thêm vào giỏ</button>
-          <button class="btn-detail">Chi tiết</button>
-        </div>
-      </div>
-    </div>
-    <div class="product-card fade-in d1">
-      <span class="product-badge badge-hot">HOT</span>
-      <div class="product-img-wrap"><div class="product-img">🖥️</div></div>
-      <div class="product-info">
-        <div class="product-cat">PC Gaming</div>
-        <div class="product-name">PC Gaming RTX 4090</div>
-        <div class="product-specs">i9-14900K · RTX 4090 · 64GB · 4TB NVMe</div>
-        <div class="product-price-row">
-          <div>
-            <div class="product-price">85,000,000đ</div>
-            <div class="product-price-old">95,000,000đ</div>
-          </div>
-          <div class="product-rating">★★★★★ <span style="color:var(--muted)">(45)</span></div>
-        </div>
-        <div class="product-actions">
-          <button class="btn-add">🛒 Thêm vào giỏ</button>
-          <button class="btn-detail">Chi tiết</button>
-        </div>
-      </div>
-    </div>
-    <div class="product-card fade-in d2">
-      <span class="product-badge badge-new">MỚI</span>
-      <div class="product-img-wrap"><div class="product-img">⌨️</div></div>
-      <div class="product-info">
-        <div class="product-cat">Gaming Gear</div>
-        <div class="product-name">Bàn Phím Mechanical RGB</div>
-        <div class="product-specs">Cherry MX Red · TKL · RGB · PBT Keycaps</div>
-        <div class="product-price-row">
-          <div>
-            <div class="product-price">2,200,000đ</div>
-            <div class="product-price-old">2,800,000đ</div>
-          </div>
-          <div class="product-rating">★★★★☆ <span style="color:var(--muted)">(167)</span></div>
-        </div>
-        <div class="product-actions">
-          <button class="btn-add">🛒 Thêm vào giỏ</button>
-          <button class="btn-detail">Chi tiết</button>
-        </div>
-      </div>
-    </div>
-    <div class="product-card fade-in d3">
-      <div class="product-img-wrap"><div class="product-img">📺</div></div>
-      <div class="product-info">
-        <div class="product-cat">Phụ Kiện</div>
-        <div class="product-name">Màn Hình 4K 144Hz</div>
-        <div class="product-specs">27" IPS · 4K · 144Hz · HDR600 · 1ms</div>
-        <div class="product-price-row">
-          <div>
-            <div class="product-price">12,000,000đ</div>
-            <div class="product-price-old">15,000,000đ</div>
-          </div>
-          <div class="product-rating">★★★★★ <span style="color:var(--muted)">(78)</span></div>
-        </div>
-        <div class="product-actions">
-          <button class="btn-add">🛒 Thêm vào giỏ</button>
-          <button class="btn-detail">Chi tiết</button>
-        </div>
-      </div>
-    </div>
-    <div class="product-card fade-in d4">
-      <span class="product-badge badge-sale">SALE</span>
-      <div class="product-img-wrap"><div class="product-img">🎮</div></div>
-      <div class="product-info">
-        <div class="product-cat">Gaming Gear</div>
-        <div class="product-name">Tay Cầm Xbox Series X</div>
-        <div class="product-specs">Bluetooth 5.0 · USB-C · AA battery · 40h</div>
-        <div class="product-price-row">
-          <div>
-            <div class="product-price">1,800,000đ</div>
-            <div class="product-price-old">2,400,000đ</div>
-          </div>
-          <div class="product-rating">★★★★☆ <span style="color:var(--muted)">(203)</span></div>
-        </div>
-        <div class="product-actions">
-          <button class="btn-add">🛒 Thêm vào giỏ</button>
-          <button class="btn-detail">Chi tiết</button>
-        </div>
-      </div>
-    </div>
+
+    <?php 
+        } // Kết thúc vòng lặp while
+    } 
+    ?>
+
+    
   </div>
 </section>
 
@@ -1027,7 +978,7 @@ define('UPLOAD_DIR', $uploadPath . DIRECTORY_SEPARATOR);
   </div>
 </footer>
 <script>
-// ── Star field
+
 (function(){
   const sf = document.getElementById('starfield');
   for(let i=0;i<120;i++){
@@ -1073,16 +1024,8 @@ function updateCountdown(){
 }
 setInterval(updateCountdown, 1000);
 
-// ── Add to cart
-document.querySelectorAll('.btn-add').forEach(btn => {
-  btn.addEventListener('click', function(){
-    const badge = document.querySelector('.cart-badge');
-    badge.textContent = parseInt(badge.textContent) + 1;
-    this.textContent = '✓ Đã thêm!';
-    this.style.background = '#059669';
-    setTimeout(() => { this.textContent = '🛒 Thêm vào giỏ'; this.style.background = ''; }, 1500);
-  });
-});
+
+
 </script>
 
 <script src="js/trangchu.js"></script>

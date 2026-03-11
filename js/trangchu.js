@@ -1,4 +1,4 @@
-// ── Star field
+
 (function(){
   const sf = document.getElementById('starfield');
   for(let i=0;i<120;i++){
