@@ -80,8 +80,9 @@ if (isset($_POST['login'])) {
 }
 ?>
 
+<!-- NÚT QUÊN MẬT KHẨU → dẫn sang trang QuenMatKhau.php -->
 <div class="Duoi">
-<p class="QuenMk">Quên Mật Khẩu...</p>
+<a class="QuenMk" href="QuenMatKhau.php">Quên Mật Khẩu?</a>
 </div>
 
 <div class="hoac">
@@ -101,6 +102,27 @@ if (isset($_POST['login'])) {
 </div>
 
 </div>
+
+<script>
+const password  = document.getElementById('password');
+const showPass  = document.getElementById('showPass');
+const hidePass  = document.getElementById('hidePass');
+
+// Mặc định: hiện icon "mắt hiện" (showPass), ẩn icon "mắt ẩn" (hidePass)
+hidePass.style.display = 'none';
+
+showPass.addEventListener('click', function () {
+    password.type = 'text';
+    showPass.style.display = 'none';
+    hidePass.style.display = 'inline';
+});
+
+hidePass.addEventListener('click', function () {
+    password.type = 'password';
+    hidePass.style.display = 'none';
+    showPass.style.display = 'inline';
+});
+</script>
 
 </body>
 </html>
