@@ -3,7 +3,14 @@
 <?php
 session_start();
 
+if (!isset($_SESSION['MaND'])) { header('Location: DangNhap.php'); exit; }
+$user_id = (int)$_SESSION['MaND'];
 
+$uploadPath = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'avatars';
+if (!file_exists($uploadPath)) {
+    mkdir($uploadPath, 0777, true);
+}
+define('UPLOAD_DIR', $uploadPath . DIRECTORY_SEPARATOR);
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -1079,5 +1086,128 @@ document.querySelectorAll('.btn-add').forEach(btn => {
 </script>
 
 <script src="js/trangchu.js"></script>
+<?php 
+// CHỈ HIỂN THỊ KHUNG CHAT NẾU TÀI KHOẢN KHÔNG PHẢI LÀ "admin"
+if (isset($_SESSION['TenDangNhap']) && $_SESSION['TenDangNhap'] !== 'admin') { 
+?>
+
+   
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+      
+<style>
+    #chat-box {
+        position: fixed; bottom: 20px; right: 20px; width: 320px;
+        background: white; border-radius: 10px;
+        box-shadow: 0px 4px 15px rgba(0,0,0,0.2); z-index: 9999;
+        font-family: Arial, sans-serif;
+    }
+    #chat-header {
+        background: #007bff; color: white; padding: 12px;
+        border-top-left-radius: 10px; border-top-right-radius: 10px;
+        font-weight: bold; text-align: center; cursor: pointer;
+    }
+    #chat-content {
+        height: 300px; overflow-y: auto; padding: 10px;
+        background: #fafafa; display: flex; flex-direction: column;
+    }
+    #chat-input-area {
+        display: flex; padding: 10px; border-top: 1px solid #ddd;
+    }
+    #txt-message {
+        flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 5px; outline: none;
+    }
+    #btn-send {
+        background: #007bff; color: white; border: none; padding: 8px 15px;
+        margin-left: 5px; border-radius: 5px; cursor: pointer; font-weight: bold;
+    }
+    #btn-send:hover { background: #0056b3; }
+</style>
+
+<div id="chat-box">
+    <div id="chat-header" onclick="toggleChat()">💬 Trò chuyện với Admin</div>
+    <div id="chat-body">
+        <div id="chat-content">
+            </div>
+        <div id="chat-input-area">
+            <input type="text" id="txt-message" placeholder="Nhập tin nhắn..." onkeypress="handleKeyPress(event)">
+            <button id="btn-send" onclick="sendMessage()">Gửi</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Hàm Thu gọn / Mở rộng khung chat
+    function toggleChat() {
+        $("#chat-body").slideToggle();
+    }
+
+    // Hàm tải tin nhắn từ Database lên
+    function loadMessages() {
+        $.ajax({
+            url: "load_messages.php",
+            type: "GET",
+            success: function(data) {
+                var chatContent = $("#chat-content");
+                // Kiểm tra xem thanh cuộn có đang ở dưới cùng không
+                var isScrolledToBottom = chatContent[0].scrollHeight - chatContent[0].clientHeight <= chatContent[0].scrollTop + 20;
+                
+                chatContent.html(data); // Đổ dữ liệu vào khung
+                
+                // Nếu đang ở dưới cùng thì tự cuộn xuống khi có tin nhắn mới
+                if(isScrolledToBottom) {
+                    chatContent.scrollTop(chatContent[0].scrollHeight);
+                }
+            }
+        });
+    }
+
+    // Hàm Gửi tin nhắn
+    function sendMessage() {
+        var message = $("#txt-message").val();
+        if(message.trim() !== "") {
+            $.ajax({
+                url: "send_message.php",
+                type: "POST",
+                data: { noidung: message },
+                success: function() {
+                    $("#txt-message").val(""); // Xóa trắng ô nhập
+                    loadMessages(); // Tải lại tin nhắn ngay lập tức
+                    
+                    // Bắt buộc cuộn xuống dưới cùng sau khi gửi
+                    setTimeout(function(){
+                        var chatContent = $("#chat-content");
+                        chatContent.scrollTop(chatContent[0].scrollHeight);
+                    }, 100);
+                }
+            });
+        }
+    }
+
+    // Ấn Enter để gửi thay vì bấm nút
+    function handleKeyPress(e) {
+        if(e.keyCode === 13) {
+            sendMessage();
+        }
+    }
+
+    // Khi trang web vừa tải xong:
+    $(document).ready(function(){
+        loadMessages(); // Load tin nhắn lần đầu
+        
+        // Cứ mỗi 2 giây lại ngầm chạy hàm loadMessages() 1 lần để quét tin nhắn mới
+        setInterval(loadMessages, 2000); 
+        
+        // Cuộn xuống dưới cùng lúc mới mở
+        setTimeout(function(){
+            var chatContent = $("#chat-content");
+            chatContent.scrollTop(chatContent[0].scrollHeight);
+        }, 500);
+    });  
+</script>
+
+    <?php 
+} // Dòng này khóa cái lệnh if lại
+?>
 </body>
 </html>

@@ -100,3 +100,14 @@ BEGIN
     VALUES
     (@PTenDangNhap, @PMatKhau,@PMatKhau3Lop, @PHoTen, @PEmail, @PSoDienThoai, @PDiaChi, @PVaiTro)
 END
+CREATE TABLE dbo.YeuThich (
+    MaYT   INT IDENTITY(1,1) PRIMARY KEY,
+    MaND   INT NOT NULL FOREIGN KEY REFERENCES NguoiDung(MaND),
+    MaSP   INT NOT NULL FOREIGN KEY REFERENCES SanPham(MaSP),
+    NgayThem DATETIME DEFAULT GETDATE()
+);
+ALTER TABLE dbo.NguoiDung 
+ADD Avatar varchar(255) NULL;
+USE QLBanHang;
+ALTER TABLE NguoiDung ADD TrangThai int NOT NULL DEFAULT 1;
+-- 1 = hoat dong, 0 = bi khoa
