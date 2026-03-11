@@ -469,7 +469,7 @@ body {
         <?php if ($user['VaiTro'] == 1): ?>
         <a href="QuanLyNguoiDung.php" class="ni">&#x1F6E1; Quan ly nguoi dung</a>
         <?php endif; ?>
-        <a href="QuanLyTinNhan.php" class="ni">&#x1F4AC; Quan ly tin nhan</a>
+        <a href="QuanLyTinNhan1.php" class="ni">&#x1F4AC; Quan ly tin nhan</a>
         <a href="DangXuat.php" class="ni" style="color:#ef4444">🚪 Dang xuat</a>
       </nav>
     </div>
