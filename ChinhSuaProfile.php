@@ -124,6 +124,19 @@ $sMsg  = $success==='info' ? 'Cap nhat thong tin thanh cong!' : ($success==='ava
 
 *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
 
+
+
+a.back {
+    border: 2px solid #242342;
+    border-radius: 8px;
+    width: 100px;
+    height: 30px;
+    display: flex;
+    justify-content: center;
+    text-decoration: none;
+    color: #bbbbbb;
+    align-items: center;
+}
 body {
   font-family: 'Exo 2', system-ui, sans-serif;
   background: var(--navy);
@@ -435,6 +448,7 @@ body {
     <img class="tav" src="<?= htmlspecialchars($avSrc) ?>" alt="">
     <span><?= htmlspecialchars($user['TenDangNhap']) ?></span>
   </div>
+                <a href="TrangChuDaDangNhap.php" class="back">&#x2190; Trang Chủ</a>
 </div>
 
 <div class="lay">
@@ -468,8 +482,9 @@ body {
         <!-- THEM DOAN NAY -->
         <?php if ($user['VaiTro'] == 1): ?>
         <a href="QuanLyNguoiDung.php" class="ni">&#x1F6E1; Quan ly nguoi dung</a>
+                <a href="QuanLyTinNhan.php" class="ni">&#x1F4AC; Quan ly tin nhan</a>
+
         <?php endif; ?>
-        <a href="QuanLyTinNhan1.php" class="ni">&#x1F4AC; Quan ly tin nhan</a>
         <a href="DangXuat.php" class="ni" style="color:#ef4444">🚪 Dang xuat</a>
       </nav>
     </div>
