@@ -1,3 +1,32 @@
+<?php
+session_start();
+
+$serverName = "localhost\\SQLEXPRESS";
+$database   = "QLBanHang";
+
+$connectionInfo = [
+    "Database" => $database,
+    "TrustServerCertificate" => true
+];
+
+$conn = sqlsrv_connect($serverName, $connectionInfo);
+
+if ($conn === false) {
+    die(print_r(sqlsrv_errors(), true));
+}
+
+// Giả sử Admin có MaND = 1. Nếu chưa đăng nhập hoặc không phải admin thì chặn lại.
+if (!isset($_SESSION['MaND']) || $_SESSION['MaND'] != 1) {
+    die("<h3>Bạn không có quyền truy cập trang này. Vui lòng đăng nhập bằng tài khoản Admin!</h3>");
+}
+
+// Lấy danh sách các khách hàng đã từng nhắn tin với Admin
+$sql_users = "SELECT DISTINCT ND.MaND, ND.HoTen 
+              FROM NguoiDung ND
+              JOIN TinNhan TN ON ND.MaND = TN.MaNguoiGui OR ND.MaND = TN.MaNguoiNhan
+              WHERE ND.MaND != 1"; // Bỏ qua chính Admin
+$stmt_users = sqlsrv_query($conn, $sql_users);
+?>
 
 <!DOCTYPE html>
 <html lang="vi">
@@ -15,20 +44,22 @@
         .user-item:hover { background: #e9ecef; }
         .user-item.active { background: #d0e8ff; border-left: 4px solid #007bff; }
         /* Cột bên phải: Khung chat */
-        .chat-area { width: 70%; display: flex; flex-direction: column; }
-        .chat-header {padding: 15px;background: #fff;border-bottom: 1px solid #ddd;font-weight: bold;font-size: 18px;color: #333;display: flex;justify-content: space-between;align-items: center;}
 
-a.back77 {
-    border: 3px solid #b9b9b9;
+
+        a.back {
+    border: 2px solid #242342;
     border-radius: 8px;
     width: 100px;
     height: 30px;
     display: flex;
     justify-content: center;
     text-decoration: none;
-    color: black;
+    color: #000000;
     align-items: center;
 }
+        .chat-area { width: 70%; display: flex; flex-direction: column; }
+        .chat-header { padding: 15px; background: #fff; border-bottom: 1px solid #ddd; font-weight: bold; font-size: 18px; color: #333;      display: flex;  align-items: center;
+    justify-content: space-between;  }
         .chat-history { flex: 1; padding: 20px; overflow-y: auto; background: #fff; }
         .chat-input { padding: 15px; border-top: 1px solid #ddd; display: flex; background: #fafafa; }
         .chat-input input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; outline: none; }
@@ -42,15 +73,16 @@ a.back77 {
 <div class="chat-container">
     <div class="user-list">
         <h3>Danh sách Chat</h3>
-                    <div class="user-item" onclick="openChat(6, 'Tien', this)">
-                👤 Tien            </div>
-                    <div class="user-item" onclick="openChat(7, 'Nguyen Dinh Khoa', this)">
-                👤 Nguyen Dinh Khoa            </div>
+        <?php while($user = sqlsrv_fetch_array($stmt_users, SQLSRV_FETCH_ASSOC)) { ?>
+            <div class="user-item" onclick="openChat(<?php echo $user['MaND']; ?>, '<?php echo $user['HoTen']; ?>', this)">
+                👤 <?php echo $user['HoTen']; ?>
             </div>
+        <?php } ?>
+    </div>
 
     <div class="chat-area">
         <div class="chat-header" id="chat-header-title">Chọn một khách hàng để bắt đầu chat 
-              <a href="ChinhSuaProfile.php" class="back77">&#x2190; Hồ Sơ</a>
+              <a href="ChinhSuaProfile.php" class="back">&#x2190; Ho so</a>
 
         </div>
         
@@ -136,7 +168,5 @@ a.back77 {
     }
 </script>
 
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"b272e33e38b74216b8d84cd2915abed9","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"b272e33e38b74216b8d84cd2915abed9","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
