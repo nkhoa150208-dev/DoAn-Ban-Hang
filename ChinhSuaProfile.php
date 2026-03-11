@@ -465,12 +465,11 @@ body {
         <a href="DonHang.php" class="ni">📦 Don hang cua toi</a>
         <a href="YeuThich.php" class="ni">❤️ San pham yeu thich</a>
         <a href="DiaChi.php" class="ni">🏠 Dia chi giao hang</a>
-
         <!-- THEM DOAN NAY -->
         <?php if ($user['VaiTro'] == 1): ?>
         <a href="QuanLyNguoiDung.php" class="ni">&#x1F6E1; Quan ly nguoi dung</a>
         <?php endif; ?>
-
+        <a href="QuanLyTinNhan.php" class="ni">&#x1F4AC; Quan ly tin nhan</a>
         <a href="DangXuat.php" class="ni" style="color:#ef4444">🚪 Dang xuat</a>
       </nav>
     </div>
