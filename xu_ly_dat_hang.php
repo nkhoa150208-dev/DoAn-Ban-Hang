@@ -127,12 +127,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 sqlsrv_fetch($stmt_dh);
                 $maDH_Moi = sqlsrv_get_field($stmt_dh, 0);
 
-                foreach ($_SESSION['giohang'] as $maSP => $sp) {
-                    sqlsrv_query($conn,
-                        "INSERT INTO ChiTietDonHang (MaDH, MaSP, SoLuong, DonGia) VALUES (?, ?, ?, ?)",
-                        [$maDH_Moi, $maSP, $sp['SoLuong'], $sp['Gia']]);
-                }
+                // B. THÊM TỪNG MÓN VÀO BẢNG ChiTietDonHang VÀ TRỪ SỐ LƯỢNG TỒN KHO
+                foreach($_SESSION['giohang'] as $maSP => $sp) {
+                    $soLuongMua = $sp['SoLuong'];
+                    $giaBan = $sp['Gia'];
 
+                    // 1. Lưu vào bảng ChiTietDonHang
+                    $sql_insert_ct = "INSERT INTO ChiTietDonHang (MaDH, MaSP, SoLuong, DonGia) VALUES (?, ?, ?, ?)";
+                    sqlsrv_query($conn, $sql_insert_ct, [$maDH_Moi, $maSP, $soLuongMua, $giaBan]);
+
+                    // 2. Trừ số lượng tồn kho trong bảng SanPham
+                    $sql_tru_kho = "UPDATE SanPham SET SoLuongTon = SoLuongTon - ? WHERE MaSP = ?";
+                    sqlsrv_query($conn, $sql_tru_kho, [$soLuongMua, $maSP]);
+                }
                 // Tang luot da dung ma giam gia
                 if (isset($_SESSION['maGiamGia'])) {
                     sqlsrv_query($conn,
