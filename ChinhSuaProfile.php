@@ -482,6 +482,7 @@ body {
         <!-- THEM DOAN NAY -->
         <?php if ($user['VaiTro'] == 1): ?>
         <a href="QuanLyNguoiDung.php" class="ni">&#x1F6E1; Quan ly nguoi dung</a>
+        <a href="quan_ly_don_hang.php" class="ni" style="color:#00e5ff; font-weight:600;">&#x1F4CB; Quan ly don hang</a>
                 <a href="QuanLyTinNhan.php" class="ni">&#x1F4AC; Quan ly tin nhan</a>
 
         <?php endif; ?>
