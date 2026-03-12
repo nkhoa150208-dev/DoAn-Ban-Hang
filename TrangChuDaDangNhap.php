@@ -54,6 +54,42 @@ define('UPLOAD_DIR', $uploadPath . DIRECTORY_SEPARATOR);
     overflow-x: hidden;
   }
 
+
+
+
+
+
+
+
+
+
+
+
+/* Bổ sung CSS cho thanh tìm kiếm */
+  .nav-search { position: relative; } /* Giữ khung tìm kiếm làm gốc */
+  .search-dropdown {
+    position: absolute; top: 100%; left: 0; width: 100%;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    margin-top: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.6);
+    display: none; /* Ẩn đi khi chưa gõ chữ */
+    max-height: 350px; overflow-y: auto; z-index: 9999;
+  }
+  .search-item {
+    padding: 10px 15px; border-bottom: 1px solid rgba(0,229,255,0.1);
+    display: flex; align-items: center; gap: 12px;
+    text-decoration: none; color: var(--text); cursor: pointer; transition: 0.2s;
+  }
+  .search-item:last-child { border-bottom: none; }
+  .search-item:hover { background: rgba(0,229,255,0.1); color: var(--cyan); }
+  .search-item-icon { font-size: 24px; }
+  .search-item-info { display: flex; flex-direction: column; }
+  .search-item-name { font-size: 13px; font-weight: 600; }
+  .search-item-price { font-size: 12px; color: var(--purple2); font-family: 'Orbitron', monospace; font-weight: bold; margin-top: 3px; }
+  .search-empty { padding: 15px; text-align: center; color: var(--muted); font-size: 13px; }
+
+
+
+
   /* ── SCROLLBAR ── */
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: var(--navy2); }
@@ -619,9 +655,11 @@ define('UPLOAD_DIR', $uploadPath . DIRECTORY_SEPARATOR);
     <a href="#promo">Khuyến Mãi</a>
     <a href="#footer">Liên Hệ</a>
   </div>
-  <div class="nav-search">
+<div class="nav-search">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-    <input type="text" placeholder="Tìm kiếm sản phẩm...">
+    <input type="text" id="search-input" placeholder="Tìm kiếm sản phẩm (vd: iPhone, Laptop)..." autocomplete="off">
+    
+    <div id="search-results" class="search-dropdown"></div>
   </div>
   
   <div class="nav-actions">
@@ -790,6 +828,52 @@ function themVaoGio(maSP, buttonElement) {
         }
     });
 }
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+
+
+
+
+
+<script>
+$(document).ready(function(){
+    // Khi gõ phím vào ô tìm kiếm
+    $('#search-input').on('keyup', function() {
+        var keyword = $(this).val(); // Lấy chữ khách vừa gõ
+        
+        if (keyword.length > 0) {
+            // Gửi chữ đó qua file PHP bằng AJAX
+            $.ajax({
+                url: 'tim_kiem_san_pham.php',
+                type: 'POST',
+                data: { tukhoa: keyword },
+                success: function(data) {
+                    $('#search-results').html(data).show(); // Hiển thị kết quả
+                }
+            });
+        } else {
+            $('#search-results').hide(); // Xóa chữ thì ẩn hộp kết quả đi
+        }
+    });
+
+    // Bấm ra ngoài khoảng trống thì tự động ẩn hộp tìm kiếm đi cho gọn
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('.nav-search').length) {
+            $('#search-results').hide();
+        }
+    });
+});
 </script>
 <!-- PRODUCTS -->
 <section class="products" id="products">
@@ -864,8 +948,7 @@ if ($conn === false) {
                 
                 <div class="product-actions">
                     <button class="btn-add" onclick="themVaoGio(<?php echo $row['MaSP']; ?>, this)">🛒 Thêm vào giỏ</button>
-                    <button class="btn-detail">Chi tiết</button>
-                </div>
+<button class="btn-detail" onclick="window.location.href='ChiTietSanPham.php?id=<?php echo $row['MaSP']; ?>'">Chi tiết</button>                </div>
             </div>
         </div>
 
