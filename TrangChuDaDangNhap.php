@@ -441,10 +441,22 @@ define('UPLOAD_DIR', $uploadPath . DIRECTORY_SEPARATOR);
   .badge-new { background: var(--cyan); color: var(--navy); }
   .badge-sale { background: var(--green); color: #fff; }
 
-  .product-img-wrap {
+ .product-img-wrap {
     height: 180px; display: flex; align-items: center; justify-content: center;
     background: linear-gradient(135deg, var(--panel2), var(--navy3));
-    padding: 20px; position: relative; overflow: hidden;
+    padding: 0; /* SỬA TỪ 20px THÀNH 0 - ĐỂ XÓA KHOẢNG TRỐNG */
+    position: relative; overflow: hidden;
+  }
+  /* ÉP ẢNH SẢN PHẨM PHẢI PHÓNG TO KHÍT KHUNG */
+  .product-img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* 'cover' giúp ảnh tràn đầy khung. Nếu không muốn bị cắt lẹm viền ảnh, bạn đổi thành 'contain' nhé */
+    transition: transform 0.3s; /* Giữ lại hiệu ứng phóng to khi đưa chuột vào */
+  }
+  
+  .product-card:hover .product-img-wrap img {
+    transform: scale(1.08); /* Hiệu ứng zoom ảnh khi trỏ chuột */
   }
   .product-img-wrap::after {
     content: ''; position: absolute; bottom: 0; left: 0; right: 0;
@@ -809,15 +821,19 @@ function themVaoGio(maSP, buttonElement) {
         type: "POST",
         data: { id_sanpham: maSP },
         success: function(response) {
-            // Cập nhật số trên giỏ hàng
+            // NẾU BACKEND PHÁT HIỆN ĐÃ ĐẶT QUÁ SỐ LƯỢNG KHO
+            if (response.trim() === "VUOT_QUY_DINH") {
+                alert("⚠️ SỐ LƯỢNG ĐẠT GIỚI HẠN!\nKho không đủ sản phẩm để bạn thêm tiếp vào giỏ hàng.");
+                return; // Dừng lại, không đổi màu nút, không cộng giỏ hàng
+            }
+
+            // Nếu thành công bình thường
             $("#so-luong-gio-hang").text(response);
             
-            // Đổi màu nút thành xanh lá
             let oldText = buttonElement.innerHTML;
             buttonElement.innerHTML = '✓ Đã thêm!';
             buttonElement.style.background = '#059669'; 
             
-            // Trả lại nút cũ sau 1.5 giây
             setTimeout(() => { 
                 buttonElement.innerHTML = oldText; 
                 buttonElement.style.background = ''; 
@@ -930,15 +946,27 @@ if ($conn === false) {
             
         <div class="product-card fade-in">
             <div class="product-img-wrap">
+            <?php if (!empty($row['HinhAnh'])): ?>
+                <img src="<?php echo htmlspecialchars($row['HinhAnh']); ?>" alt="Ảnh">
+            <?php else: ?>
                 <div class="product-img">
                     <?php echo ($row['MaDM'] == 1) ? '💻' : (($row['MaDM'] == 2) ? '📱' : '📦'); ?>
                 </div>
-            </div>
+            <?php endif; ?>
+        </div>
             
             <div class="product-info">
                 <div class="product-cat">Danh mục ID: <?php echo $row['MaDM']; ?></div>
                 <div class="product-name"><?php echo $row['TenSP']; ?></div>
-                <div class="product-specs"><?php echo $specs; ?></div>
+                
+                <div class="product-specs">
+                    <?php echo $specs; ?><br>
+                    <?php if($row['SoLuongTon'] > 0): ?>
+                        <span style="color: var(--green); font-weight: bold; font-size: 12px;">✅ Còn lại: <?php echo $row['SoLuongTon']; ?> sản phẩm</span>
+                    <?php else: ?>
+                        <span style="color: #ef4444; font-weight: bold; font-size: 12px;">❌ Đã hết hàng</span>
+                    <?php endif; ?>
+                </div>
                 
                 <div class="product-price-row">
                     <div>
@@ -947,10 +975,15 @@ if ($conn === false) {
                 </div>
                 
                 <div class="product-actions">
-                    <button class="btn-add" onclick="themVaoGio(<?php echo $row['MaSP']; ?>, this)">🛒 Thêm vào giỏ</button>
-<button class="btn-detail" onclick="window.location.href='ChiTietSanPham.php?id=<?php echo $row['MaSP']; ?>'">Chi tiết</button>                </div>
-            </div>
-        </div>
+                    <?php if($row['SoLuongTon'] > 0): ?>
+                        <button class="btn-add" onclick="themVaoGio(<?php echo $row['MaSP']; ?>, this)">🛒 Thêm vào giỏ</button>
+                    <?php else: ?>
+                        <button class="btn-add" style="background: #475569; opacity: 0.6; cursor: not-allowed;" onclick="alert('Rất tiếc! Sản phẩm này hiện đã hết hàng.');">🚫 Hết hàng</button>
+                    <?php endif; ?>
+                    
+                    <button class="btn-detail" onclick="window.location.href='ChiTietSanPham.php?id=<?php echo $row['MaSP']; ?>'">Chi tiết</button>
+                </div>
+            </div></div>
 
     <?php 
         } // Kết thúc vòng lặp while
@@ -959,6 +992,7 @@ if ($conn === false) {
 
     
   </div>
+  
 </section>
 
 <!-- PROMO BANNER -->
