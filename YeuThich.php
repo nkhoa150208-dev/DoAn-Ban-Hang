@@ -1,74 +1,148 @@
 <?php
+session_start();
 $serverName = "localhost\\SQLEXPRESS";
 $connectionInfo = ["Database"=>"QLBanHang","TrustServerCertificate"=>true,"CharacterSet"=>"UTF-8"];
 $conn = sqlsrv_connect($serverName, $connectionInfo);
 if ($conn === false) die(print_r(sqlsrv_errors(), true));
-session_start();
+
 if (!isset($_SESSION['MaND'])) { header('Location: DangNhap.php'); exit; }
 $user_id = (int)$_SESSION['MaND'];
 
-// Xoa yeu thich
-if (isset($_GET['xoa'])) {
-    sqlsrv_query($conn, "DELETE FROM YeuThich WHERE MaND=? AND MaSP=?", [$user_id, (int)$_GET['xoa']]);
-    header('Location: YeuThich.php'); exit;
-}
+// Lấy thông tin user (để hiện thanh menu trái)
+$res_u  = sqlsrv_query($conn,"SELECT * FROM dbo.NguoiDung WHERE MaND=?",[$user_id]);
+$user = sqlsrv_fetch_array($res_u, SQLSRV_FETCH_ASSOC);
 
-$dsYT = sqlsrv_query($conn,
-    "SELECT yt.MaSP, sp.TenSP, sp.Gia, sp.HinhAnh, sp.MoTa FROM YeuThich yt
-     JOIN SanPham sp ON yt.MaSP=sp.MaSP WHERE yt.MaND=?", [$user_id]);
+// Truy vấn lấy danh sách sản phẩm yêu thích
+$sql_yt = "SELECT yt.MaYT, sp.* FROM YeuThich yt 
+           JOIN SanPham sp ON yt.MaSP = sp.MaSP 
+           WHERE yt.MaND = ? ORDER BY yt.NgayThem DESC";
+$stmt_yt = sqlsrv_query($conn, $sql_yt, [$user_id]);
+$hasFav = false;
 ?>
-<!DOCTYPE html><html lang="vi"><head>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Yeu Thich</title>
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;700;900&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<title>Sản Phẩm Yêu Thích - TechVN</title>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#0f0f13;--s1:#1a1a24;--s2:#22222f;--bd:#2e2e40;--p:#6366f1;--ac:#ec4899;--tx:#e2e2f0;--mu:#888899;--r:14px}
-body{font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--tx);padding:24px 16px 60px}
-.topbar{max-width:1000px;margin:0 auto 24px;display:flex;align-items:center;gap:12px}
-.logo{font-size:22px;font-weight:800;background:linear-gradient(135deg,var(--p),var(--ac));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.back{margin-left:auto;text-decoration:none;color:var(--mu);font-size:13px;padding:8px 14px;border:1px solid var(--bd);border-radius:8px;transition:.2s}
-.back:hover{color:var(--tx);border-color:var(--p)}
-.wrap{max-width:1000px;margin:0 auto}
-.card{background:var(--s1);border:1px solid var(--bd);border-radius:var(--r);padding:24px}
-.sec-title{font-size:17px;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:8px}
-.sec-title::after{content:'';flex:1;height:1px;background:var(--bd)}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
-.sp-card{background:var(--s2);border:1px solid var(--bd);border-radius:12px;overflow:hidden;transition:.2s}
-.sp-card:hover{border-color:var(--p);transform:translateY(-2px)}
-.sp-img{width:100%;height:160px;object-fit:cover;background:var(--bd)}
-.sp-body{padding:12px}
-.sp-name{font-size:14px;font-weight:600;margin-bottom:4px}
-.sp-desc{font-size:12px;color:var(--mu);margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.sp-price{font-weight:700;color:var(--p);font-size:15px;margin-bottom:10px}
-.btn-xoa{width:100%;padding:8px;border-radius:8px;border:1.5px solid var(--ac);color:var(--ac);background:transparent;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none;display:block;text-align:center;transition:.2s}
-.btn-xoa:hover{background:var(--ac);color:#fff}
-.empty{text-align:center;padding:60px;color:var(--mu)}.empty-icon{font-size:48px;margin-bottom:12px}
-</style></head><body>
+/* CSS CHUẨN CỦA BẠN */
+:root { --navy: #050d1a; --navy2: #071223; --panel: #0d1f38; --panel2: #0f2444; --cyan: #00e5ff; --purple2: #a855f7; --green: #22c55e; --tx: #e2eaf5; --muted: #7a92b0; --border: rgba(0,229,255,0.12); --r: 14px; }
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+body { font-family: 'Exo 2', sans-serif; background: var(--navy); color: var(--tx); min-height: 100vh; padding: 24px 16px 60px; }
+a { text-decoration: none; }
+
+.topbar { max-width: 980px; margin: 0 auto 28px; display: flex; align-items: center; gap: 12px; background: rgba(5,13,26,0.92); border: 1px solid var(--border); border-radius: var(--r); padding: 12px 20px; }
+.logo { font-family: 'Orbitron', monospace; font-size: 18px; font-weight: 900; color: var(--cyan); }
+.lay { max-width: 980px; margin: 0 auto; display: grid; grid-template-columns: 260px 1fr; gap: 20px; }
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--r); padding: 24px; box-shadow: 0 8px 32px rgba(0,0,0,.5); }
+
+/* Sidebar */
+.sb { display: flex; flex-direction: column; gap: 20px; }
+.snav { display: flex; flex-direction: column; gap: 4px; }
+.ni { padding: 10px 12px; border-radius: 10px; font-size: 14px; color: var(--muted); transition: .15s; border: 1px solid transparent; }
+.ni:hover { background: rgba(0,229,255,0.06); color: var(--cyan); }
+.ni.act { background: rgba(0,229,255,0.1); color: var(--cyan); border-color: rgba(0,229,255,0.3); font-weight: 600; box-shadow: 0 0 15px rgba(0,229,255,0.08); }
+
+/* Favorite Grid */
+.st { font-family: 'Orbitron', monospace; font-size: 16px; font-weight: 700; margin-bottom: 20px; color: var(--cyan); display: flex; align-items: center; gap: 8px; }
+.st::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(0,229,255,0.4), transparent); }
+
+.grid-yt { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+.sp-card { background: var(--panel2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: 0.3s; position: relative; }
+.sp-card:hover { border-color: #ef4444; box-shadow: 0 5px 15px rgba(239,68,68,0.2); transform: translateY(-5px); }
+.sp-img { height: 150px; background: var(--navy); display: flex; align-items: center; justify-content: center; font-size: 50px; }
+.sp-info { padding: 15px; }
+.sp-name { font-size: 14px; font-weight: bold; color: var(--tx); margin-bottom: 5px; line-height: 1.3; }
+.sp-price { color: var(--cyan); font-weight: bold; font-family: 'Orbitron', sans-serif; font-size: 15px; margin-bottom: 10px; }
+
+/* Nút xóa */
+.btn-del { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); color: #ef4444; border: none; border-radius: 50%; width: 30px; height: 30px; font-size: 14px; cursor: pointer; transition: 0.2s; }
+.btn-del:hover { background: #ef4444; color: white; }
+</style>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+
 <div class="topbar">
-  <div class="logo">&#x1F6CD; QLBanHang</div>
-  <a href="ChinhSuaProfile.php" class="back">&#x2190; Ho so</a>
+  <a href="TrangChuDaDangNhap.php" class="logo">&#x1F6CD; KhoaOngNghiem Tech</a>
+  <a href="TrangChuDaDangNhap.php" style="margin-left:auto; color:var(--cyan);">&#x2190; Về Trang Chủ</a>
 </div>
-<div class="wrap">
-  <div class="card">
-    <div class="sec-title">&#x2764; San pham yeu thich</div>
-    <?php if ($dsYT && sqlsrv_has_rows($dsYT)): ?>
-      <div class="grid">
-      <?php while ($sp = sqlsrv_fetch_array($dsYT, SQLSRV_FETCH_ASSOC)): ?>
-        <div class="sp-card">
-          <img class="sp-img" src="<?= htmlspecialchars($sp['HinhAnh'] ?? '') ?>" alt="" onerror="this.style.display='none'">
-          <div class="sp-body">
-            <div class="sp-name"><?= htmlspecialchars($sp['TenSP']) ?></div>
-            <div class="sp-desc"><?= htmlspecialchars($sp['MoTa'] ?? '') ?></div>
-            <div class="sp-price"><?= number_format($sp['Gia'],0,',','.') ?>d</div>
-            <a href="?xoa=<?= $sp['MaSP'] ?>" class="btn-xoa" onclick="return confirm('Xoa khoi yeu thich?')">&#x1F5D1; Xoa</a>
-          </div>
-        </div>
-      <?php endwhile; ?>
+
+<div class="lay">
+  <aside class="sb">
+    <div class="card">
+      <nav class="snav">
+        <a href="ChinhSuaProfile.php" class="ni">👤 Hồ sơ cá nhân</a>
+        <?php if ($user['VaiTro'] == 0): ?>
+            <a href="DonHang.php" class="ni">📦 Đơn hàng của tôi</a>
+            <a href="YeuThich.php" class="ni act">❤️ Sản phẩm yêu thích</a>
+            <a href="diachigiaohang.php" class="ni">🏠 Địa chỉ giao hàng</a>
+        <?php endif; ?>
+        <?php if ($user['VaiTro'] == 1): ?>
+            <a href="QuanLyDonHang.php" class="ni">📦 Quản lý đơn hàng</a>
+            <a href="QuanLyNguoiDung.php" class="ni">&#x1F6E1; Quản lý người dùng</a>
+            <a href="QuanLyTinNhan.php" class="ni">&#x1F4AC; Quản lý tin nhắn</a>
+        <?php endif; ?>
+        <a href="DangXuat.php" class="ni" style="color:#ef4444">🚪 Đăng xuất</a>
+      </nav>
+    </div>
+  </aside>
+
+  <main>
+    <div class="card">
+      <div class="st">❤️ SẢN PHẨM BẠN ĐÃ THẢ TIM</div>
+      
+      <div class="grid-yt">
+        <?php while ($sp = sqlsrv_fetch_array($stmt_yt, SQLSRV_FETCH_ASSOC)): 
+            $hasFav = true;
+        ?>
+            <div class="sp-card" id="fav-<?= $sp['MaSP'] ?>">
+                <button class="btn-del" title="Bỏ yêu thích" onclick="removeFav(<?= $sp['MaSP'] ?>)">✖</button>
+                
+                <a href="ChiTietSanPham.php?id=<?= $sp['MaSP'] ?>" style="display:block; text-decoration:none;">
+                    <div class="sp-img">
+                        <?= (!empty($sp['HinhAnh'])) ? "<img src='".$sp['HinhAnh']."' style='max-width:100%; max-height:100%; object-fit:contain;'>" : (($sp['MaDM']==1)?'💻':'📱') ?>
+                    </div>
+                    <div class="sp-info">
+                        <div class="sp-name"><?= htmlspecialchars($sp['TenSP']) ?></div>
+                        <div class="sp-price"><?= number_format($sp['Gia'], 0, ',', '.') ?> đ</div>
+                    </div>
+                </a>
+            </div>
+        <?php endwhile; ?>
       </div>
-    <?php else: ?>
-      <div class="empty"><div class="empty-icon">&#x2764;</div>Ban chua co san pham yeu thich nao</div>
-    <?php endif; ?>
-  </div>
+
+      <?php if(!$hasFav): ?>
+        <div style="text-align:center; padding: 50px; color: var(--muted);">
+            <div style="font-size: 50px; margin-bottom: 10px;">🤍</div>
+            <h3>Danh sách yêu thích đang trống!</h3>
+            <p>Hãy lướt trang chủ và thả tim cho sản phẩm bạn thích nhé.</p>
+        </div>
+      <?php endif; ?>
+      
+    </div>
+  </main>
 </div>
-</body></html>
-<?php sqlsrv_close($conn); ?>
+
+<script>
+// Hàm xóa trực tiếp trên trang Yêu thích
+function removeFav(maSP) {
+    if(confirm("Bạn muốn bỏ thả tim sản phẩm này?")) {
+        $.ajax({
+            url: 'xu_ly_yeu_thich.php',
+            type: 'POST',
+            data: { id_sanpham: maSP },
+            success: function(res) {
+                if(res === 'removed') {
+                    // Hiệu ứng mờ dần rồi xóa cục sản phẩm đó khỏi màn hình
+                    $('#fav-' + maSP).fadeOut(300, function() { $(this).remove(); });
+                }
+            }
+        });
+    }
+}
+</script>
+
+</body>
+</html>

@@ -26,7 +26,11 @@ $sql = "SELECT sp.*, dm.TenDM
         WHERE sp.MaSP = ?";
 $stmt = sqlsrv_query($conn, $sql, [$maSP]);
 $sp = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
-
+$isFav = false;
+if (isset($_SESSION['MaND'])) {
+    $checkFav = sqlsrv_query($conn, "SELECT 1 FROM YeuThich WHERE MaND=? AND MaSP=?", [$_SESSION['MaND'], $maSP]);
+    if ($checkFav && sqlsrv_has_rows($checkFav)) $isFav = true;
+}
 // Nếu gõ ID bậy bạ không có trong SQL
 if (!$sp) {
     die("<h2 style='color:white; text-align:center; padding:50px;'>Sản phẩm không tồn tại hoặc đã bị xóa!</h2>");
@@ -69,6 +73,9 @@ if (isset($_SESSION['giohang'])) {
         .sp-container { max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         @media (max-width: 768px) { .sp-container { grid-template-columns: 1fr; } }
 
+
+        .btn-fav { width: 60px; font-size: 26px; background: var(--panel2); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; color: #ef4444; }
+.btn-fav:hover { border-color: #ef4444; background: rgba(239,68,68,0.1); }
         /* Ảnh sản phẩm */
         .sp-img-box { background: linear-gradient(135deg, var(--panel2), var(--navy)); border-radius: 16px; display: flex; align-items: center; justify-content: center; height: 400px; font-size: 120px; border: 1px solid var(--border); filter: drop-shadow(0 0 20px rgba(0,229,255,0.1)); }
         
@@ -147,9 +154,14 @@ if (isset($_SESSION['giohang'])) {
             <div class="spec-item"><div class="spec-title">Tình trạng</div><div class="spec-value" style="color:var(--green);">Còn <?= $sp['SoLuongTon'] ?> sản phẩm</div></div>
         </div>
 
-        <button class="btn-buy" onclick="themVaoGio(<?= $sp['MaSP'] ?>, this)">
-            🛒 THÊM VÀO GIỎ HÀNG NGAY
-        </button>
+        <div style="display: flex; gap: 15px;">
+            <button class="btn-buy" style="flex: 1;" onclick="themVaoGio(<?= $sp['MaSP'] ?>, this)">
+                🛒 THÊM VÀO GIỎ HÀNG NGAY
+            </button>
+            <button class="btn-fav" id="btn-heart" onclick="toggleYeuThich(<?= $sp['MaSP'] ?>)">
+                <?= $isFav ? '❤️' : '🤍' ?>
+            </button>
+        </div>
 
         <?php if(!empty($sp['MoTa'])): ?>
         <div class="sp-desc">
@@ -184,6 +196,24 @@ function themVaoGio(maSP, buttonElement) {
         },
         error: function() {
             alert("Lỗi gửi dữ liệu!");
+        }
+    });
+}
+function toggleYeuThich(maSP) {
+    $.ajax({
+        url: 'xu_ly_yeu_thich.php',
+        type: 'POST',
+        data: { id_sanpham: maSP },
+        success: function(response) {
+            let heartBtn = document.getElementById('btn-heart');
+            if(response === 'added') {
+                heartBtn.innerHTML = '❤️'; // Đổi sang tim đỏ
+            } else if(response === 'removed') {
+                heartBtn.innerHTML = '🤍'; // Đổi về tim rỗng
+            } else {
+                alert("Bạn cần đăng nhập để sử dụng tính năng này!");
+                window.location.href = "DangNhap.php";
+            }
         }
     });
 }
