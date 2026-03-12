@@ -77,8 +77,29 @@ if (isset($_SESSION['giohang'])) {
         .btn-fav { width: 60px; font-size: 26px; background: var(--panel2); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; color: #ef4444; }
 .btn-fav:hover { border-color: #ef4444; background: rgba(239,68,68,0.1); }
         /* Ảnh sản phẩm */
-        .sp-img-box { background: linear-gradient(135deg, var(--panel2), var(--navy)); border-radius: 16px; display: flex; align-items: center; justify-content: center; height: 400px; font-size: 120px; border: 1px solid var(--border); filter: drop-shadow(0 0 20px rgba(0,229,255,0.1)); }
+/* Khung chứa ảnh */
+        .sp-img-box { 
+            background: linear-gradient(135deg, var(--panel2), var(--navy)); 
+            border-radius: 16px; 
+            display: flex; align-items: center; justify-content: center; 
+            height: 400px; font-size: 120px; 
+            border: 1px solid var(--border); 
+            filter: drop-shadow(0 0 20px rgba(0,229,255,0.1)); 
+            overflow: hidden; /* Quan trọng: Cắt phần ảnh lòi ra khỏi góc bo tròn */
+            box-shadow: 0 0 40px rgb(4 0 61);
+        }
         
+        /* Ảnh bên trong khung */
+        .sp-img-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Lệnh thần thánh giúp ảnh bung khít 100% khung */
+            transition: transform 0.4s ease;
+                
+        }
+        .sp-img-box:hover img {
+            transform: scale(1.05); /* Rê chuột vào ảnh tự zoom nhẹ rất xịn */
+        }        
         /* Thông tin sản phẩm */
         .sp-cat { color: var(--cyan); font-size: 12px; text-transform: uppercase; font-weight: bold; letter-spacing: 2px; margin-bottom: 10px; }
         .sp-name { font-family: 'Orbitron', sans-serif; font-size: 28px; line-height: 1.2; margin: 0 0 15px 0; color: #fff; }
@@ -114,9 +135,9 @@ if (isset($_SESSION['giohang'])) {
 <div class="sp-container">
     <div class="sp-img-box">
         <?php 
-        // Chế icon nếu chưa có ảnh
+        // Chỉ in thẻ img sạch sẽ, mọi thứ để CSS lo
         if(!empty($sp['HinhAnh'])) {
-            echo "<img src='".htmlspecialchars($sp['HinhAnh'])."' style='max-width:100%; max-height:100%; object-fit:contain;' alt=''>";
+            echo "<img src='".htmlspecialchars($sp['HinhAnh'])."' alt='Ảnh sản phẩm'>";
         } else {
             echo ($sp['MaDM'] == 1) ? '💻' : (($sp['MaDM'] == 2) ? '📱' : '📦'); 
         }
