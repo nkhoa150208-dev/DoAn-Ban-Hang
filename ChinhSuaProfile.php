@@ -482,6 +482,7 @@ body {
             <a href="diachigiaohang.php" class="ni">🏠 Dia chi giao hang</a>
         <?php endif; ?>        <!-- THEM DOAN NAY -->
         <?php if ($user['VaiTro'] == 1): ?>
+        <a href="QuanLyMaGiamGia.php" class="ni">🎫 Quan ly ma giam gia</a>
         <a href="QuanLyDonHang.php" class="ni">📦 Quản lý đơn hàng</a>
         <a href="QuanLyNguoiDung.php" class="ni">&#x1F6E1; Quản lý người dùng</a>
         <a href="QuanLyTinNhan.php" class="ni">&#x1F4AC; Quản lý tin nhắn</a>
