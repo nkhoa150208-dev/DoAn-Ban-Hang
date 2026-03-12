@@ -46,6 +46,16 @@ CREATE TABLE SanPham (
 );
 GO
 
+CREATE TABLE SoDiaChi (
+    MaDC INT PRIMARY KEY IDENTITY(1,1),
+    MaND INT NOT NULL FOREIGN KEY REFERENCES NguoiDung(MaND),
+    HoTenNguoiNhan NVARCHAR(100) NOT NULL,
+    SoDienThoai VARCHAR(15) NOT NULL,
+    DiaChiCuThe NVARCHAR(255) NOT NULL,
+    ThanhPho NVARCHAR(100) NOT NULL,
+    MacDinh INT DEFAULT 0 -- 1: Địa chỉ mặc định, 0: Địa chỉ phụ
+);
+GO
 -- 4. Đơn hàng
 CREATE TABLE DonHang (
     MaDH        INT PRIMARY KEY IDENTITY(1,1),
