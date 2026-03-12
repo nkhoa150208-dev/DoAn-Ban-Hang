@@ -351,7 +351,7 @@ td{padding:13px 14px;vertical-align:middle}
         <div class="grid2">
           <div class="fi">
             <label id="lblGiaTri">Phan tram (%) <span class="req">*</span></label>
-            <input type="number" name="GiaTri" id="giaTri" placeholder="VD: 10" min="0.01" step="0.01" required>
+            <input type="number" name="GiaTri" id="giaTri" placeholder="VD: 10" min="0.01" max="100" step="0.01" required>
           </div>
           <div class="fi" id="wrapToiDa">
             <label>Giam toi da (d)</label>
@@ -405,6 +405,10 @@ function toggleLoai() {
 }
 document.getElementById('codeInput').addEventListener('input', function() {
   this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g,'');
+});
+document.getElementById('giaTri').addEventListener('input', function() {
+  const loai = document.querySelector('input[name=LoaiGiam]:checked').value;
+  if (loai === '0' && parseFloat(this.value) > 100) this.value = 100;
 });
 </script>
 </body>
