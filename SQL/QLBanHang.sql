@@ -162,3 +162,24 @@ CREATE TABLE TinNhan (
     FOREIGN KEY (MaNguoiGui) REFERENCES NguoiDung(MaND),
     FOREIGN KEY (MaNguoiNhan) REFERENCES NguoiDung(MaND)
 );
+CREATE TABLE MaGiamGia (
+    MaMGG       INT PRIMARY KEY IDENTITY(1,1),
+    Code        VARCHAR(50)   UNIQUE NOT NULL,
+    LoaiGiam    INT           DEFAULT 0,  -- 0: Theo %, 1: Số tiền cố định
+    GiaTri      DECIMAL(18,2) NOT NULL,   -- % hoặc số tiền
+    GiamToiDa   DECIMAL(18,2) DEFAULT 0, -- Giảm tối đa (cho loại %)
+    DonToiThieu DECIMAL(18,2) DEFAULT 0, -- Đơn tối thiểu để dùng
+    SoLanDung   INT           DEFAULT 1, -- Số lần được dùng
+    DaDung      INT           DEFAULT 0, -- Đã dùng bao nhiêu lần
+    NgayHetHan  DATETIME      NULL,
+    TrangThai   INT           DEFAULT 1  -- 1: Còn hiệu lực, 0: Vô hiệu
+);
+GO
+
+-- Du lieu mau
+INSERT INTO MaGiamGia (Code, LoaiGiam, GiaTri, GiamToiDa, DonToiThieu, SoLanDung) VALUES
+('GIAM10', 0, 10, 500000, 1000000, 100),   -- Giam 10%, toi da 500k, don toi thieu 1tr
+('SALE50K', 1, 50000, 0, 500000, 50),      -- Giam thang 50k, don toi thieu 500k
+('NEWUSER', 0, 15, 200000, 0, 1);          -- Giam 15%, toi da 200k, khong gioi han don
+GO
+select * from MaGiamGia
