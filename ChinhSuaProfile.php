@@ -476,15 +476,15 @@ body {
     <div class="card">
       <nav class="snav">
         <a href="ChinhSuaProfile.php" class="ni act">👤 Ho so ca nhan</a>
-        <a href="DonHang.php" class="ni">📦 Don hang cua toi</a>
-        <a href="YeuThich.php" class="ni">❤️ San pham yeu thich</a>
-        <a href="DiaChi.php" class="ni">🏠 Dia chi giao hang</a>
-        <!-- THEM DOAN NAY -->
+<?php if ($user['VaiTro'] == 0): ?>
+            <a href="DonHang.php" class="ni">📦 Don hang cua toi</a>
+            <a href="YeuThich.php" class="ni">❤️ San pham yeu thich</a>
+            <a href="diachigiaohang.php" class="ni">🏠 Dia chi giao hang</a>
+        <?php endif; ?>        <!-- THEM DOAN NAY -->
         <?php if ($user['VaiTro'] == 1): ?>
-        <a href="QuanLyNguoiDung.php" class="ni">&#x1F6E1; Quan ly nguoi dung</a>
-        <a href="quan_ly_don_hang.php" class="ni" style="color:#00e5ff; font-weight:600;">&#x1F4CB; Quan ly don hang</a>
-                <a href="QuanLyTinNhan.php" class="ni">&#x1F4AC; Quan ly tin nhan</a>
-
+        <a href="QuanLyDonHang.php" class="ni">📦 Quản lý đơn hàng</a>
+        <a href="QuanLyNguoiDung.php" class="ni">&#x1F6E1; Quản lý người dùng</a>
+        <a href="QuanLyTinNhan.php" class="ni">&#x1F4AC; Quản lý tin nhắn</a>
         <?php endif; ?>
         <a href="DangXuat.php" class="ni" style="color:#ef4444">🚪 Dang xuat</a>
       </nav>
@@ -509,7 +509,18 @@ body {
           <div class="ii"><label>Ten dang nhap</label><div class="iv"><?= htmlspecialchars($user['TenDangNhap']) ?></div></div>
           <div class="ii"><label>Email</label><div class="iv"><?= htmlspecialchars($user['Email'] ?? '—') ?></div></div>
           <div class="ii"><label>So dien thoai</label><div class="iv"><?= htmlspecialchars($user['SoDienThoai'] ?? '—') ?></div></div>
-          <div class="ii" style="grid-column:1/-1"><label>Dia chi</label><div class="iv"><?= htmlspecialchars($user['DiaChi'] ?? '—') ?></div></div>
+       <div class="ii" style="grid-column:1/-1">
+            <label>Dia chi</label>
+            <div class="iv"><?= htmlspecialchars($user['DiaChi'] ?? '—') ?></div>
+            
+            <?php if ($user['VaiTro'] == 0): ?>
+            <div style="margin-top: 10px;">
+                <a href="diachigiaohang.php" class="btn bg2" style="text-decoration: none; border-color: var(--cyan); color: var(--cyan);">
+                    📍 QUẢN LÝ SỔ ĐỊA CHỈ GIAO HÀNG
+                </a>
+            </div>
+            <?php endif; ?>
+          </div>
           <div class="ii"><label>Vai tro</label><div class="iv"><?= $vTxt ?></div></div>
         </div>
         <div class="fa"><button class="btn bp" onclick="swn('edit')">&#x270F; Chinh sua ngay</button></div>

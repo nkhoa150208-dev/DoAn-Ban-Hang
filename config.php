@@ -4,8 +4,7 @@ $database   = "QLBanHang";
 
 $connectionInfo = [
     "Database" => $database,
-    "TrustServerCertificate" => true,
-    "CharacterSet" => "UTF-8"
+    "TrustServerCertificate" => true
 ];
 
 $conn = sqlsrv_connect($serverName, $connectionInfo);

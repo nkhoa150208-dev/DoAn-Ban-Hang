@@ -16,7 +16,7 @@ if (isset($_GET['id'])) {
         [$maDHChon]);
     while ($row = sqlsrv_fetch_array($rsCT, SQLSRV_FETCH_ASSOC)) $chiTiet[] = $row;
 }
-$ttColor = ['chờ xử lý'=>'#f59e0b','Đang giao'=>'#6366f1','Đã giao'=>'#22c55e','Đã Hủy'=>'#ef4444'];
+$ttColor = ['Cho xu ly'=>'#f59e0b','Dang giao'=>'#6366f1','Da giao'=>'#22c55e','Da huy'=>'#ef4444'];
 ?>
 <!DOCTYPE html><html lang="vi"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
@@ -59,9 +59,7 @@ body{font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--tx);padd
               $ngay = ($dh['NgayDat'] instanceof DateTime) ? $dh['NgayDat']->format('d/m/Y') : ''; ?>
         <div class="order-item">
           <div><div class="order-id">Don #<?= $dh['MaDH'] ?></div><div class="order-date"><?= $ngay ?></div></div>
-          <div class="badge" style="background:<?= $c ?>22;color:<?= $c ?>;border:1px solid <?= $c ?>55">
-    <?= htmlspecialchars($dh['TrangThai'], ENT_QUOTES, 'UTF-8') ?>
-</div>
+          <div class="badge" style="background:<?= $c ?>22;color:<?= $c ?>;border:1px solid <?= $c ?>55"><?= htmlspecialchars($dh['TrangThai']) ?></div>
           <div class="order-total"><?= number_format($dh['TongTien'],0,',','.') ?>d</div>
           <a href="?id=<?= $dh['MaDH'] ?>" class="btn-det <?= $maDHChon==$dh['MaDH']?'act':'' ?>">Chi tiet</a>
         </div>
