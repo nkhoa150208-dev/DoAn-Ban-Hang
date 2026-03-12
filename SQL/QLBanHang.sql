@@ -81,7 +81,16 @@ CREATE TABLE YeuThich (
     NgayThem DATETIME DEFAULT GETDATE()
 );
 GO
-
+CREATE TABLE dbo.YeuThich (
+    MaYT   INT IDENTITY(1,1) PRIMARY KEY,
+    MaND   INT NOT NULL FOREIGN KEY REFERENCES NguoiDung(MaND),
+    MaSP   INT NOT NULL FOREIGN KEY REFERENCES SanPham(MaSP),
+    NgayThem DATETIME DEFAULT GETDATE()
+);
+USE QLBanHang;
+ALTER TABLE NguoiDung ADD TrangThai int NOT NULL DEFAULT 1;
+-- 1 = hoat dong, 0 = bi khoa
+-- 1 = hoat dong, 0 = bi khoa
 -- 7. Stored procedure thêm người dùng
 CREATE PROCEDURE sp_ThemNguoiDung
     @PTenDangNhap VARCHAR(50),
@@ -122,7 +131,11 @@ VALUES
     (N'Laptop Dell XPS 13', 1, 35000000, 10, 'Core i7 12th', '16GB', '512GB SSD', N'24 tháng'),
     (N'iPhone 15 Pro Max',  2, 32000000, 20, 'A17 Pro',       '8GB',  '256GB',     N'12 tháng');
 GO
-
+ALTER TABLE dbo.NguoiDung 
+ADD Avatar varchar(255) NULL;
+USE QLBanHang;
+ALTER TABLE NguoiDung ADD TrangThai int NOT NULL DEFAULT 1;
+-- 1 = hoat dong, 0 = bi khoa
 -- Kiểm tra
 SELECT MaND, TenDangNhap, HoTen, VaiTro FROM NguoiDung;
 SELECT MaSP, TenSP, Gia FROM SanPham;

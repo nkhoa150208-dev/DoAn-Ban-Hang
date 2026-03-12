@@ -12,7 +12,7 @@ include 'config.php';
 // Xử lý cập nhật trạng thái
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $maDH      = (int)$_POST['maDH'];
-    $trangThai = htmlspecialchars($_POST['trangThai']);
+  $trangThai = htmlspecialchars($_POST['trangThai'], ENT_QUOTES, 'UTF-8');
 
     $sql  = "UPDATE DonHang SET TrangThai = ? WHERE MaDH = ?";
     $stmt = sqlsrv_query($conn, $sql, [$trangThai, $maDH]);
