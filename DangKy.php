@@ -51,7 +51,7 @@ required>
 
 
 
-<input class="khung" maxlength="4" name="MatKhau3Lop" type="text" placeholder="Mật Khẩu 3 Lớp">
+<input class="khung" maxlength="4" name="MatKhau3Lop" type="password" inputmode="numeric" placeholder="Mật Khẩu 3 Lớp (Chỉ 4 số)" oninput="this.value = this.value.replace(/[^0-9]/g, '');" required>
 <input class="khung" name="HoTen" type="text" placeholder="Họ Tên">
 <input class="khung" name="Email" type="text" placeholder="Email">
 <input class="khung" name="SoDienThoai" type="text" placeholder="Số Điện Thoại">
