@@ -13,12 +13,30 @@ if (!file_exists($uploadPath)) {
 define('UPLOAD_DIR', $uploadPath . DIRECTORY_SEPARATOR);
 
 // Đếm tổng giỏ hàng để hiển thị ban đầu
+// Đếm tổng giỏ hàng để hiển thị ban đầu
 $tongGioHang = 0;
 if (isset($_SESSION['giohang'])) {
     foreach ($_SESSION['giohang'] as $item) {
         $tongGioHang += $item['SoLuong'];
     }
 }
+
+// ==== THÊM ĐOẠN NÀY VÀO NGAY BÊN DƯỚI ====
+$serverName = "localhost\\SQLEXPRESS";
+$database   = "QLBanHang";
+$connectionInfo = ["Database" => $database, "TrustServerCertificate" => true, "CharacterSet" => "UTF-8"];
+$conn = sqlsrv_connect($serverName, $connectionInfo);
+
+// Lấy ngẫu nhiên 12 sản phẩm để làm hiệu ứng xoay vòng
+$sql_hero = "SELECT TOP 40 MaSP, TenSP, Gia, HinhAnh, MaDM FROM SanPham ORDER BY NEWID()"; 
+$stmt_hero = sqlsrv_query($conn, $sql_hero);
+$hero_products = [];
+if ($stmt_hero) {
+    while ($row = sqlsrv_fetch_array($stmt_hero, SQLSRV_FETCH_ASSOC)) {
+        $hero_products[] = $row;
+    }
+}
+// ==========================================
 
 ?>
 <!DOCTYPE html>
@@ -412,7 +430,7 @@ if (isset($_SESSION['giohang'])) {
   .cat-count { font-size: 11px; color: var(--muted); }
 
   /* ── PRODUCTS ── */
-  .products { background: var(--navy); }
+  .products { background: #0b1a32; }
 
   .product-filters {
     display: flex; gap: 8px; margin-bottom: 32px; flex-wrap: wrap;
@@ -646,28 +664,48 @@ if (isset($_SESSION['giohang'])) {
     .footer-grid { grid-template-columns: 1fr 1fr; }
   }
   .tav{
-  width:36px;
-  height:36px;
+  width:28px;
+  height:28px;
   border-radius:50%;
   object-fit:cover;
   border:none;
   transition:0.3s;
   border: 2px solid var(--cyan);
 }
+.tr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 60px;
+}
+button.NoiDung1 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-family: 'Exo 2', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding-block: 1px;
+    padding-inline: 6px;
+    border-width: 2px;
+    position: relative;
+}
+
+button.NoiDung1:hover {
+    border-color: var(--cyan);
+    color: var(--cyan);
+}
 
 .tav:hover{
   transform:scale(1.08);
 }
-.tr{
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 13px;
-    color: var(--muted);
-    overflow:hidden;
-    background:#031a33;
-  }
+
 .sinon{
   text-align: center;
 }
@@ -678,10 +716,10 @@ if (isset($_SESSION['giohang'])) {
 <nav>
   <a class="logo" href="#"><span>KhoaOngNghiem</span><span> TechVN </span></a>
   <div class="nav-links">
-    <a href="#" class="active">Trang Chủ</a>
-    <a href="#categories">Sản Phẩm</a>
-    <a href="#promo">Khuyến Mãi</a>
-    <a href="#footer">Liên Hệ</a>
+    <a href="#" class="active" id="nav-home">Trang Chủ</a>
+    <a href="#products" id="nav-products">Sản Phẩm</a>
+    <a href="#promo" id="nav-promo">Khuyến Mãi</a>
+    <a href="#footer" id="nav-footer">Liên Hệ</a>
   </div>
 <div class="nav-search">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -738,9 +776,7 @@ if (isset($_SESSION['giohang'])) {
       <button class="btn-primary" onclick="document.getElementById('products').scrollIntoView({behavior:'smooth'})">
         ⚡ Mua Ngay
       </button>
-      <button class="btn-outline" onclick="document.getElementById('categories').scrollIntoView({behavior:'smooth'})">
-        → Xem Danh Mục
-      </button>
+     
     </div>
     <div class="hero-stats">
       <div class="stat"><div class="stat-num">10K+</div><div class="stat-label">Sản phẩm</div></div>
@@ -752,36 +788,33 @@ if (isset($_SESSION['giohang'])) {
   <div class="hero-visual">
     <div class="hero-devices">
       <div class="device-glow"></div>
-      <!-- Main laptop -->
-      <div class="device-card" style="width:220px;height:160px;left:22%;top:10%">
+      
+      <div class="device-card" id="hc-0" style="width:220px;height:160px;left:22%;top:10%; cursor:pointer; transition: opacity 0.5s, transform 0.4s ease;">
         <div class="dc-inner">
-          <div class="dc-icon">💻</div>
-          <div class="dc-name">LAPTOP ROG</div>
-          <div class="dc-price">25,000,000đ</div>
+          <div class="dc-icon" id="hi-0">💻</div>
+          <div class="dc-name" id="hn-0">Đang tải...</div>
+          <div class="dc-price" id="hp-0">0đ</div>
         </div>
       </div>
-      <!-- Phone -->
-      <div class="device-card" style="width:130px;height:130px;right:0;top:10px">
+      <div class="device-card" id="hc-1" style="width:130px;height:130px;right:0;top:10px; cursor:pointer; transition: opacity 0.5s, transform 0.4s ease;">
         <div class="dc-inner">
-          <div class="dc-icon">📱</div>
-          <div class="dc-name">iPhone 15 Pro</div>
-          <div class="dc-price">30M đ</div>
+          <div class="dc-icon" id="hi-1">📱</div>
+          <div class="dc-name" id="hn-1">Đang tải...</div>
+          <div class="dc-price" id="hp-1">0đ</div>
         </div>
       </div>
-      <!-- Headphone -->
-      <div class="device-card" style="width:130px;height:130px;left:0;bottom:20px">
+      <div class="device-card" id="hc-2" style="width:130px;height:130px;left:0;bottom:20px; cursor:pointer; transition: opacity 0.5s, transform 0.4s ease;">
         <div class="dc-inner">
-          <div class="dc-icon">🎧</div>
-          <div class="dc-name">Gaming Headset</div>
-          <div class="dc-price">1,500,000đ</div>
+          <div class="dc-icon" id="hi-2">🎧</div>
+          <div class="dc-name" id="hn-2">Đang tải...</div>
+          <div class="dc-price" id="hp-2">0đ</div>
         </div>
       </div>
-      <!-- Mouse -->
-      <div class="device-card" style="width:120px;height:130px;right:10px;bottom:10px">
+      <div class="device-card" id="hc-3" style="width:120px;height:130px;right:10px;bottom:10px; cursor:pointer; transition: opacity 0.5s, transform 0.4s ease;">
         <div class="dc-inner">
-          <div class="dc-icon">🖱️</div>
-          <div class="dc-name">Logitech G Pro</div>
-          <div class="dc-price">1,400,000đ</div>
+          <div class="dc-icon" id="hi-3">🖱️</div>
+          <div class="dc-name" id="hn-3">Đang tải...</div>
+          <div class="dc-price" id="hp-3">0đ</div>
         </div>
       </div>
     </div>
@@ -789,40 +822,7 @@ if (isset($_SESSION['giohang'])) {
 </section>
 
 <!-- CATEGORIES -->
-<section class="categories" id="categories">
-  <div class="section-header fade-in">
-    <div class="section-label">// Khám Phá</div>
-    <h2 class="section-title">Danh Mục <em>Nổi Bật</em></h2>
-    <div class="section-line"></div>
-  </div>
-  <div class="cat-grid">
-    <div class="cat-card fade-in d1">
-      <div class="cat-icon">💻</div>
-      <div class="cat-name">Laptop</div>
-      <div class="cat-count">245 sản phẩm</div>
-    </div>
-    <div class="cat-card fade-in d2">
-      <div class="cat-icon">🖥️</div>
-      <div class="cat-name">PC Gaming</div>
-      <div class="cat-count">128 sản phẩm</div>
-    </div>
-    <div class="cat-card fade-in d3">
-      <div class="cat-icon">📱</div>
-      <div class="cat-name">Điện Thoại</div>
-      <div class="cat-count">310 sản phẩm</div>
-    </div>
-    <div class="cat-card fade-in d4">
-      <div class="cat-icon">🎧</div>
-      <div class="cat-name">Phụ Kiện</div>
-      <div class="cat-count">520 sản phẩm</div>
-    </div>
-    <div class="cat-card fade-in d5">
-      <div class="cat-icon">🖱️</div>
-      <div class="cat-name">Gaming Gear</div>
-      <div class="cat-count">180 sản phẩm</div>
-    </div>
-  </div>
-</section>
+
 <script>
 function themVaoGio(maSP, buttonElement) {
     // 1. Chuông báo: Bấm phát phải hiện thông báo này ngay!
@@ -911,13 +911,23 @@ $(document).ready(function(){
     <h2 class="section-title">Sản Phẩm <em>Hot</em></h2>
     <div class="section-line"></div>
   </div>
-  <div class="product-filters fade-in">
-    <button class="filter-btn active">Tất Cả</button>
-    <button class="filter-btn">Laptop</button>
-    <button class="filter-btn">PC Gaming</button>
-    <button class="filter-btn">Điện Thoại</button>
-    <button class="filter-btn">Phụ Kiện</button>
-    <button class="filter-btn">Gaming Gear</button>
+  <?php 
+      // KHAI BÁO BIẾN Ở ĐÂY ĐỂ CÁC NÚT BẤM BÊN DƯỚI HIỂU ĐƯỢC
+      $madm_filter = isset($_GET['danhmuc']) ? (int)$_GET['danhmuc'] : 0; 
+  ?>
+  
+  <div class="product-filters fade-in" id="bo-loc">
+    <a href="TrangChuDaDangNhap.php#bo-loc" class="filter-btn <?= ($madm_filter == 0) ? 'active' : '' ?>" style="text-decoration:none; display:inline-block;">Tất Cả</a>
+    
+    <a href="TrangChuDaDangNhap.php?danhmuc=1#bo-loc" class="filter-btn <?= ($madm_filter == 1) ? 'active' : '' ?>" style="text-decoration:none; display:inline-block;">Laptop</a>
+    
+    <a href="TrangChuDaDangNhap.php?danhmuc=3#bo-loc" class="filter-btn <?= ($madm_filter == 3) ? 'active' : '' ?>" style="text-decoration:none; display:inline-block;">PC Gaming</a>
+    
+    <a href="TrangChuDaDangNhap.php?danhmuc=2#bo-loc" class="filter-btn <?= ($madm_filter == 2) ? 'active' : '' ?>" style="text-decoration:none; display:inline-block;">Điện Thoại</a>
+    
+    <a href="TrangChuDaDangNhap.php?danhmuc=4#bo-loc" class="filter-btn <?= ($madm_filter == 4) ? 'active' : '' ?>" style="text-decoration:none; display:inline-block;">Phụ Kiện</a>
+    
+    <a href="TrangChuDaDangNhap.php?danhmuc=5#bo-loc" class="filter-btn <?= ($madm_filter == 5) ? 'active' : '' ?>" style="text-decoration:none; display:inline-block;">Gaming Gear</a>
   </div>
   <div class="products-grid">
 
@@ -931,7 +941,8 @@ $database   = "QLBanHang";
 
 $connectionInfo = [
     "Database" => $database,
-    "TrustServerCertificate" => true
+    "TrustServerCertificate" => true,
+    "CharacterSet" => "UTF-8"   // <-- THÊM ĐÚNG DÒNG NÀY VÀO LÀ HẾT LỖI
 ];
 
 $conn = sqlsrv_connect($serverName, $connectionInfo);
@@ -941,8 +952,16 @@ if ($conn === false) {
 }
 
     // 2. Câu lệnh lấy sản phẩm (Giữ nguyên như cũ)
-    $sql_sp = "SELECT * FROM SanPham ORDER BY MaSP DESC"; 
-    $stmt_sp = sqlsrv_query($conn, $sql_sp);
+   $madm_filter = isset($_GET['danhmuc']) ? (int)$_GET['danhmuc'] : 0;
+
+    // Nếu có chọn danh mục thì lọc theo MaDM, nếu không (MaDM = 0) thì lấy tất cả
+    if ($madm_filter > 0) {
+        $sql_sp = "SELECT * FROM SanPham WHERE MaDM = ? ORDER BY MaSP DESC";
+        $stmt_sp = sqlsrv_query($conn, $sql_sp, [$madm_filter]);
+    } else {
+        $sql_sp = "SELECT * FROM SanPham ORDER BY MaSP DESC"; 
+        $stmt_sp = sqlsrv_query($conn, $sql_sp);
+    }
 
     if ($stmt_sp === false) {
         echo "Lỗi truy vấn sản phẩm: <pre>" . print_r(sqlsrv_errors(), true) . "</pre>";
@@ -1134,12 +1153,7 @@ const observer = new IntersectionObserver(entries => {
 document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
 
 // ── Filter buttons
-document.querySelectorAll('.filter-btn').forEach(btn => {
-  btn.addEventListener('click', function(){
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    this.classList.add('active');
-  });
-});
+
 
 // ── Countdown timer
 let total = 8*3600 + 34*60 + 22;
@@ -1327,5 +1341,78 @@ if (isset($_SESSION['TenDangNhap']) && $_SESSION['TenDangNhap'] !== 'admin') {
     <?php 
 } // Dòng này khóa cái lệnh if lại
 ?>
+<script>
+// Nhận danh sách 12 sản phẩm từ PHP
+const heroProducts = <?php echo json_encode($hero_products); ?>;
+let currentHeroIndex = 0;
+
+function rotateHeroCards() {
+    if (!heroProducts || heroProducts.length === 0) return;
+    
+    for (let i = 0; i < 4; i++) {
+        // Lấy sản phẩm tiếp theo, nếu hết vòng thì quay lại từ đầu
+        let p = heroProducts[(currentHeroIndex + i) % heroProducts.length];
+        if (!p) continue;
+        
+        let card = document.getElementById('hc-' + i);
+        let iconWrap = document.getElementById('hi-' + i);
+        let nameDiv = document.getElementById('hn-' + i);
+        let priceDiv = document.getElementById('hp-' + i);
+        
+        // Làm mờ thẻ đi trước khi đổi nội dung
+        card.style.opacity = '0';
+        
+        setTimeout(() => {
+            // Thay đổi link khi click
+            card.onclick = function() {
+                window.location.href = 'ChiTietSanPham.php?id=' + p.MaSP;
+            };
+            
+            // Thay đổi tên (Cắt ngắn nếu tên quá dài để không bị tràn khung)
+            let shortName = p.TenSP.length > 16 ? p.TenSP.substring(0, 16) + '...' : p.TenSP;
+            nameDiv.innerText = shortName;
+            
+            // Thay đổi giá tiền
+            priceDiv.innerText = new Intl.NumberFormat('vi-VN').format(p.Gia) + 'đ';
+            
+            // Hiện ảnh sản phẩm (nếu có), nếu không có ảnh thì hiện Icon
+            if (p.HinhAnh && p.HinhAnh.trim() !== '') {
+                iconWrap.innerHTML = `<img src="${p.HinhAnh}" style="width:60px; height:60px; object-fit:contain; filter: drop-shadow(0 0 10px rgba(0,229,255,0.4));">`;
+            } else {
+                let icon = '📦';
+                if (p.MaDM == 1 || p.MaDM == 3) icon = '💻';
+                else if (p.MaDM == 2) icon = '📱';
+                else if (p.MaDM == 4) icon = '🎧';
+                else if (p.MaDM == 5) icon = '🖱️';
+                iconWrap.innerHTML = icon;
+            }
+            
+            // Cho thẻ hiện rõ lại
+            card.style.opacity = '1';
+        }, 500); // Chờ 0.5s mờ đi rồi đổi
+    }
+    
+    // Cộng index lên 4 để lần lặp sau lấy 4 sản phẩm mới
+    currentHeroIndex = (currentHeroIndex + 4) % heroProducts.length;
+}
+
+// Chạy lần đầu tiên ngay khi tải trang
+rotateHeroCards();
+
+// Thiết lập chu kỳ 4 giây (4000ms) đổi 1 lần
+setInterval(rotateHeroCards, 4000);
+</script>
+<script>
+// --- XỬ LÝ CLICK ĐỔI MÀU MENU ---
+document.querySelectorAll('.nav-links a').forEach(link => {
+    link.addEventListener('click', function() {
+        // Xóa class 'active' khỏi tất cả các thẻ a
+        document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+        
+        // Thêm class 'active' vào chính thẻ vừa click
+        this.classList.add('active');
+    });
+});
+</script>
 </body>
 </html>
