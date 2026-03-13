@@ -1,6 +1,7 @@
 <?php
 session_start();
 
+
 // 1. KẾT NỐI DATABASE
 $serverName = "localhost\\SQLEXPRESS";
 $database   = "QLBanHang";
@@ -35,6 +36,17 @@ if (isset($_SESSION['MaND'])) {
 if (!$sp) {
     die("<h2 style='color:white; text-align:center; padding:50px;'>Sản phẩm không tồn tại hoặc đã bị xóa!</h2>");
 }
+
+
+
+$linkTrangChu = "TrangChu.php"; // mặc định chưa đăng nhập
+
+if(isset($_SESSION['MaND'])){
+    $linkTrangChu = "TrangChuDaDangNhap.php";
+}
+
+
+
 
 // Đếm số lượng giỏ hàng để hiện lên góc phải
 $tongGioHang = 0;
@@ -123,12 +135,14 @@ if (isset($_SESSION['giohang'])) {
 <body>
 
 <div class="topbar">
-    <a href="TrangChuDaDangNhap.php" class="logo">&#x1F6CD; KhoaOngNghiem Tech</a>
+    <a href="<?= $linkTrangChu ?>" class="logo">&#x1F6CD; KhoaOngNghiem Tech</a>
+    
     <div class="nav-actions">
         <a href="ChiTietGioHang.php" class="btn-outline">
             🛒 Giỏ hàng <span class="cart-badge" id="so-luong-gio-hang"><?= $tongGioHang ?></span>
         </a>
-        <a href="TrangChuDaDangNhap.php" class="btn-outline">← Trở về</a>
+        
+        <a href="<?= $linkTrangChu ?>" class="btn-outline">← Trở về</a>
     </div>
 </div>
 

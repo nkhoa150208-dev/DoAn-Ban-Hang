@@ -11,6 +11,15 @@ if (!file_exists($uploadPath)) {
     mkdir($uploadPath, 0777, true);
 }
 define('UPLOAD_DIR', $uploadPath . DIRECTORY_SEPARATOR);
+
+// Đếm tổng giỏ hàng để hiển thị ban đầu
+$tongGioHang = 0;
+if (isset($_SESSION['giohang'])) {
+    foreach ($_SESSION['giohang'] as $item) {
+        $tongGioHang += $item['SoLuong'];
+    }
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -158,11 +167,18 @@ define('UPLOAD_DIR', $uploadPath . DIRECTORY_SEPARATOR);
   }
   .btn-cart:hover { border-color: var(--cyan); color: var(--cyan); }
   .cart-badge {
-    background: var(--cyan); color: var(--navy);
-    width: 18px; height: 18px; border-radius: 50%;
-    font-size: 10px; font-weight: 700;
-    display: flex; align-items: center; justify-content: center;
-  }
+    background: var(--cyan); 
+    color: var(--navy);
+    width: 18px; 
+    height: 18px; 
+    border-radius: 50%;
+    font-size: 10px; 
+    font-weight: 700;
+    /* display: flex;  <-- Bỏ dòng này hoặc thay bằng đoạn dưới */
+    display: none;    /* Mặc định ẩn đi */
+    align-items: center; 
+    justify-content: center;
+}
 
   .btn-login {
     background: var(--purple); color: #fff;
@@ -679,7 +695,10 @@ define('UPLOAD_DIR', $uploadPath . DIRECTORY_SEPARATOR);
    <button class="btn-cart" onclick="window.location.href='ChiTietGioHang.php'">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
       Giỏ Hàng
-      <span class="cart-badge" id="so-luong-gio-hang">0</span>
+      <span class="cart-badge" id="so-luong-gio-hang" 
+      style="<?= ($tongGioHang > 0) ? 'display: flex;' : 'display: none;' ?>">
+    <?= $tongGioHang ?>
+</span>
     </button>
     <form action="ChinhSuaProfile.php" method="POST">
         <button class="NoiDung1">
@@ -844,12 +863,6 @@ function themVaoGio(maSP, buttonElement) {
         }
     });
 }
-
-
-
-
-
-
 
 
 
@@ -1243,6 +1256,51 @@ if (isset($_SESSION['TenDangNhap']) && $_SESSION['TenDangNhap'] !== 'admin') {
             });
         }
     }
+
+    function themVaoGio(maSP, buttonElement) {
+    if(!buttonElement) return;
+
+    $.ajax({
+        url: "them_gio_hang.php",
+        type: "POST",
+        data: { id_sanpham: maSP },
+        success: function(response) {
+            if (response.trim() === "VUOT_QUY_DINH") {
+                alert("⚠️ SỐ LƯỢNG ĐẠT GIỚI HẠN!\nKho không đủ sản phẩm.");
+                return;
+            }
+
+            // 1. Lấy con số trả về
+            let soLuongMoi = parseInt(response);
+            
+            // 2. Tìm thẻ badge
+            let badge = $("#so-luong-gio-hang");
+
+            // 3. Cập nhật số và HIỆN THỊ nếu > 0
+            if (soLuongMoi > 0) {
+                badge.text(soLuongMoi);
+                badge.css("display", "flex"); // Ép nó hiện ra lại
+            } else {
+                badge.css("display", "none");
+            }
+
+            // Hiệu ứng đổi màu nút của bạn
+            let oldText = buttonElement.innerHTML;
+            buttonElement.innerHTML = '✓ Đã thêm!';
+            let originalBg = buttonElement.style.background;
+            buttonElement.style.background = '#059669'; 
+            
+            setTimeout(() => { 
+                buttonElement.innerHTML = oldText; 
+                buttonElement.style.background = originalBg; 
+            }, 1500);
+        },
+        error: function() {
+            alert("Lỗi AJAX!");
+        }
+    });
+}
+
 
     // Ấn Enter để gửi thay vì bấm nút
     function handleKeyPress(e) {

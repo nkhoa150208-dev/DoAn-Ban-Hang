@@ -1,134 +1,151 @@
 <?php
-// ============================================================
-//  KET NOI DATABASE SQL SERVER
-// ============================================================
-
 session_start();
 
+// 1. KẾT NỐI DATABASE
 $serverName     = "localhost\\SQLEXPRESS";
 $connectionInfo = ["Database"=>"QLBanHang","TrustServerCertificate"=>true,"CharacterSet"=>"UTF-8"];
 $conn = sqlsrv_connect($serverName, $connectionInfo);
 if ($conn === false) die(print_r(sqlsrv_errors(), true));
 
+// 2. KIỂM TRA ĐĂNG NHẬP
 if (!isset($_SESSION['MaND'])) { header('Location: DangNhap.php'); exit; }
 $user_id = (int)$_SESSION['MaND'];
 
-// Tạo thư mục lưu ảnh Avatar và Ảnh Sản Phẩm nếu chưa có
+// 3. LẤY THÔNG TIN USER (PHẢI ĐẶT Ở ĐÂY để các bước dưới có biến $user)
+$res  = sqlsrv_query($conn, "SELECT * FROM dbo.NguoiDung WHERE MaND=?", [$user_id]);
+$user = $res ? sqlsrv_fetch_array($res, SQLSRV_FETCH_ASSOC) : null;
+if (!$user) { session_destroy(); header('Location: DangNhap.php'); exit; }
+
+// Khởi tạo các biến thông báo để tránh lỗi "Undefined variable"
+$success = $_GET['s'] ?? "";
+$error = $_GET['e'] ?? "";
+$sMsg = ""; // <--- QUAN TRỌNG: Khởi tạo giá trị rỗng trước
+
+// 4. XỬ LÝ LOGIC THÔNG BÁO
+if ($success === 'info') $sMsg = 'Cập nhật thông tin thành công!';
+elseif ($success === 'avatar') $sMsg = 'Cập nhật ảnh đại diện thành công!';
+elseif ($success === 'product') $sMsg = 'Thêm sản phẩm thành công!';
+
+
+// Khởi tạo các biến để tránh lỗi Undefined variable khi chưa có dữ liệu
+$sMsg = ""; 
+$error = "";
+$vTxt = ""; 
+
+// Định nghĩa $vTxt dựa trên vai trò
+if (isset($user)) {
+    $vTxt = ((int)$user['VaiTro'] === 1) ? "Quản trị viên" : "Khách hàng";
+}
+
+// Logic gán thông báo thành công từ URL
+$success = $_GET['s'] ?? "";
+if ($success === 'info') $sMsg = 'Cập nhật thông tin thành công!';
+elseif ($success === 'avatar') $sMsg = 'Cập nhật ảnh đại diện thành công!';
+elseif ($success === 'product') $sMsg = 'Thêm sản phẩm thành công!';
+
+// 5. CÁC ĐƯỜNG DẪN UPLOAD
 $uploadPath = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'avatars';
 if (!file_exists($uploadPath)) mkdir($uploadPath, 0777, true);
-define('UPLOAD_DIR', $uploadPath . DIRECTORY_SEPARATOR);
 
 $uploadProdPath = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'products';
 if (!file_exists($uploadProdPath)) mkdir($uploadProdPath, 0777, true);
 
-$success = ""; $error = "";
-
+// 6. XỬ LÝ CÁC YÊU CẦU POST (AJAX & FORM)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? '';
 
-    // 1. XỬ LÝ CẬP NHẬT THÔNG TIN CÁ NHÂN (Dành cho Khách hàng)
-    if (($_POST['action'] ?? '') === 'update_info') {
-        $hoten  = trim($_POST['HoTen']      ?? '');
-        $email  = trim($_POST['Email']       ?? '');
-        $sdt    = trim($_POST['SoDienThoai'] ?? '');
-        $diachi = trim($_POST['DiaChi']      ?? '');
+    // --- A. CẬP NHẬT ẢNH ĐẠI DIỆN (FORM) ---
+    if ($action === 'update_avatar') {
+        if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === 0) {
+            $ext = pathinfo($_FILES['avatar']['name'], PATHINFO_EXTENSION);
+            $fileName = 'av_' . $user_id . '_' . time() . '.' . $ext;
+            $destPath = $uploadPath . DIRECTORY_SEPARATOR . $fileName;
+            $dbPath = 'uploads/avatars/' . $fileName;
 
-        if (empty($hoten)) {
-            $error = "Họ tên không được để trống.";
-        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $error = "Email không hợp lệ.";
-        } else {
-            $chk = sqlsrv_query($conn, "SELECT MaND FROM dbo.NguoiDung WHERE Email=? AND MaND!=?", [$email, $user_id]);
-            if ($chk && sqlsrv_fetch($chk)) {
-                $error = "Email này đã được dùng bởi tài khoản khác.";
-            } else {
-                $res = sqlsrv_query($conn, "UPDATE dbo.NguoiDung SET HoTen=?,Email=?,SoDienThoai=?,DiaChi=? WHERE MaND=?", [$hoten,$email,$sdt,$diachi,$user_id]);
-                if ($res) $success = "info"; else $error = "Lỗi cập nhật DB.";
+            if (move_uploaded_file($_FILES['avatar']['tmp_name'], $destPath)) {
+                // Cập nhật Database
+                $sql = "UPDATE dbo.NguoiDung SET Avatar = ? WHERE MaND = ?";
+                sqlsrv_query($conn, $sql, [$dbPath, $user_id]);
+                header('Location: ChinhSuaProfile.php?s=avatar');
+                exit;
             }
         }
+        $error = "Không thể tải ảnh lên.";
     }
 
-    // 2. XỬ LÝ THÊM SẢN PHẨM MỚI (Dành riêng cho Admin)
-    if (($_POST['action'] ?? '') === 'add_product') {
-        $tensp      = trim($_POST['TenSP'] ?? '');
-        $madm       = (int)($_POST['MaDM'] ?? 1);
-        $gia        = (float)($_POST['Gia'] ?? 0);
-        $soluong    = (int)($_POST['SoLuongTon'] ?? 0);
-        $mota       = trim($_POST['MoTa'] ?? '');
-        $cpu        = trim($_POST['CPU'] ?? '');
-        $ram        = trim($_POST['RAM'] ?? '');
-        $ocung      = trim($_POST['O_Cung'] ?? '');
-        $manhinh    = trim($_POST['ManHinh'] ?? '');
-        $baohanh    = trim($_POST['BaoHanh'] ?? '');
+    // --- B. AJAX: CẬP NHẬT ẢNH SẢN PHẨM ---
+    if ($action === 'update_product_img_ajax') {
+        if ((int)$user['VaiTro'] !== 1) { echo "Unauthorized"; exit; }
         
-        $hinhanh = ''; // Đường dẫn ảnh mặc định
-
-        // Xử lý upload ảnh sản phẩm
-        if (isset($_FILES['HinhAnh']) && $_FILES['HinhAnh']['error'] === UPLOAD_ERR_OK) {
+        $idSP = (int)$_POST['id'];
+        if (isset($_FILES['HinhAnh']) && $_FILES['HinhAnh']['error'] === 0) {
             $ext = pathinfo($_FILES['HinhAnh']['name'], PATHINFO_EXTENSION);
-            $fileName = 'sp_' . time() . '.' . $ext;
-            $dest = $uploadProdPath . DIRECTORY_SEPARATOR . $fileName;
-            
-            if (move_uploaded_file($_FILES['HinhAnh']['tmp_name'], $dest)) {
-                $hinhanh = 'uploads/products/' . $fileName; // Lưu đường dẫn tương đối vào SQL
+            $fileName = 'prod_' . $idSP . '_' . time() . '.' . $ext;
+            $destPath = $uploadProdPath . DIRECTORY_SEPARATOR . $fileName;
+            $dbPath = 'uploads/products/' . $fileName;
+
+            if (move_uploaded_file($_FILES['HinhAnh']['tmp_name'], $destPath)) {
+                sqlsrv_query($conn, "UPDATE SanPham SET HinhAnh = ? WHERE MaSP = ?", [$dbPath, $idSP]);
+                echo $dbPath; // Trả về đường dẫn để JS cập nhật giao diện
+            } else {
+                echo "Error moving file";
             }
         }
-
-        if (empty($tensp) || $gia <= 0) {
-            $error = "Vui lòng nhập Tên sản phẩm và Giá bán lớn hơn 0!";
-        } else {
-            $sql_add = "INSERT INTO SanPham (TenSP, MaDM, Gia, SoLuongTon, MoTa, CPU, RAM, O_Cung, ManHinh, BaoHanh, HinhAnh) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-            $params_add = [$tensp, $madm, $gia, $soluong, $mota, $cpu, $ram, $ocung, $manhinh, $baohanh, $hinhanh];
-            
-            $res_add = sqlsrv_query($conn, $sql_add, $params_add);
-            if ($res_add) $success = "product";
-            else $error = "Lỗi thêm sản phẩm: " . print_r(sqlsrv_errors(), true);
-        }
+        exit;
     }
 
-    // 3. XỬ LÝ CẬP NHẬT AVATAR
-    if (($_POST['action'] ?? '') === 'update_avatar') {
-        if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
-            $f  = $_FILES['avatar'];
-            $fi = finfo_open(FILEINFO_MIME_TYPE);
-            $mt = finfo_file($fi, $f['tmp_name']); finfo_close($fi);
-            if ($f['size'] > 2097152) {
-                $error = "Anh qua lon (max 2MB).";
-            } elseif (!in_array($mt, ['image/jpeg','image/png','image/gif','image/webp'])) {
-                $error = "Chi nhan JPG/PNG/GIF/WEBP.";
-            } else {
-                $ext  = pathinfo($f['name'], PATHINFO_EXTENSION);
-                $dest     = UPLOAD_DIR . 'av_' . $user_id . '_' . time() . '.' . $ext;
-                $destWeb  = 'uploads/avatars/' . 'av_' . $user_id . '_' . time() . '.' . $ext;
-                if (move_uploaded_file($f['tmp_name'], $dest)) {
-                    $old = sqlsrv_query($conn,"SELECT Avatar FROM dbo.NguoiDung WHERE MaND=?",[$user_id]);
-                    if ($old && $row = sqlsrv_fetch_array($old, SQLSRV_FETCH_ASSOC)) {
-                        if (!empty($row['Avatar']) && file_exists($row['Avatar'])) unlink($row['Avatar']);
-                    }
-                    $up = sqlsrv_query($conn,"UPDATE NguoiDung SET Avatar=? WHERE MaND=?",[$destWeb,$user_id]);
-                    if ($up) $success = "avatar";
-                    else $error = "Lỗi lưu ảnh vào DB.";
-                } else { $error = "Không thể lưu file. Kiểm tra quyền thư mục."; }
+    // --- C. AJAX: CẬP NHẬT KHO ---
+    if ($action === 'quick_update_stock') {
+        if ((int)$user['VaiTro'] !== 1) { echo "Unauthorized"; exit; }
+        $idSP = (int)$_POST['id'];
+        $qty = (int)$_POST['qty'];
+        
+        $sql = "UPDATE SanPham SET SoLuongTon = ? WHERE MaSP = ?";
+        $stmt = sqlsrv_query($conn, $sql, [$qty, $idSP]);
+        echo ($stmt) ? "OK" : "Error";
+        exit;
+    }
+
+    // --- D. THÊM SẢN PHẨM MỚI ---
+    if ($action === 'add_product') {
+        if ((int)$user['VaiTro'] !== 1) { exit; }
+        $ten = $_POST['TenSP'];
+        $gia = $_POST['Gia'];
+        $kho = $_POST['SoLuongTon'];
+        $mota = $_POST['MoTa'];
+        $hinhAnh = "";
+
+        if (isset($_FILES['HinhAnh']) && $_FILES['HinhAnh']['error'] === 0) {
+            $fileName = 'prod_new_' . time() . '.' . pathinfo($_FILES['HinhAnh']['name'], PATHINFO_EXTENSION);
+            if (move_uploaded_file($_FILES['HinhAnh']['tmp_name'], $uploadProdPath . DIRECTORY_SEPARATOR . $fileName)) {
+                $hinhAnh = 'uploads/products/' . $fileName;
             }
-        } else { $error = "Vui lòng chọn file ảnh."; }
+        }
+
+        $sql = "INSERT INTO SanPham (TenSP, Gia, SoLuongTon, HinhAnh, MoTa) VALUES (?, ?, ?, ?, ?)";
+        sqlsrv_query($conn, $sql, [$ten, $gia, $kho, $hinhAnh, $mota]);
+        header('Location: ChinhSuaProfile.php?s=product');
+        exit;
+    }
+    
+    // --- E. CẬP NHẬT THÔNG TIN CÁ NHÂN ---
+    if ($action === 'update_info') {
+        $hoTen = $_POST['HoTen'];
+        $email = $_POST['Email'];
+        $sdt = $_POST['SoDienThoai'];
+        $diaChi = $_POST['DiaChi'];
+        
+        $sql = "UPDATE NguoiDung SET HoTen=?, Email=?, SoDienThoai=?, DiaChi=? WHERE MaND=?";
+        sqlsrv_query($conn, $sql, [$hoTen, $email, $sdt, $diaChi, $user_id]);
+        header('Location: ChinhSuaProfile.php?s=info');
+        exit;
     }
 }
 
-$res  = sqlsrv_query($conn,"SELECT * FROM dbo.NguoiDung WHERE MaND=?",[$user_id]);
-$user = $res ? sqlsrv_fetch_array($res, SQLSRV_FETCH_ASSOC) : null;
-
-$avSrc = (!empty($user['Avatar']) && file_exists($user['Avatar']))
-    ? $user['Avatar']
-    : 'https://ui-avatars.com/api/?name='.urlencode($user['HoTen']).'&background=6366f1&color=fff&size=200';
-
-$vMap = [0=>'Khách hàng', 1=>'Quản trị viên'];
-$vTxt  = $vMap[$user['VaiTro']] ?? 'Khách hàng';
-
-// Thông báo thành công
-if ($success === 'info') $sMsg = 'Cập nhật thông tin thành công!';
-elseif ($success === 'avatar') $sMsg = 'Cập nhật ảnh đại diện thành công!';
-elseif ($success === 'product') $sMsg = 'Đã thêm SẢN PHẨM MỚI vào cửa hàng thành công!';
-else $sMsg = '';
+// 7. CHUẨN BỊ ẢNH HIỂN THỊ
+$avSrc = (!empty($user['Avatar']) && file_exists(__DIR__ . '/' . $user['Avatar'])) 
+         ? $user['Avatar'] 
+         : 'https://ui-avatars.com/api/?name='.urlencode($user['HoTen']).'&background=6366f1&color=fff&size=200';
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -236,6 +253,25 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
 .ok { background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.3); color: #4ade80; }
 .er { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3); color: #f87171; }
 @keyframes fadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:none; } }
+
+/* Style cho bảng quản lý kho */
+.stock-table { width:100%; border-collapse: separate; border-spacing: 0 8px; font-size: 13px; }
+.stock-table tr { background: rgba(13, 31, 56, 0.4); transition: 0.3s; }
+.stock-table tr:hover { background: rgba(0, 229, 255, 0.05); }
+.stock-table td { padding: 12px 10px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.stock-table td:first-child { border-left: 1px solid var(--border); border-radius: 10px 0 0 10px; padding-left: 15px; }
+.stock-table td:last-child { border-right: 1px solid var(--border); border-radius: 0 10px 10px 0; }
+
+/* Hiệu ứng cho ảnh sản phẩm */
+.prod-img-wrapper { position: relative; width: 45px; height: 45px; cursor: pointer; overflow: hidden; border-radius: 6px; border: 1.5px solid var(--border); }
+.prod-img-wrapper img { width: 100%; height: 100%; object-fit: cover; transition: 0.3s; }
+.prod-img-wrapper:hover img { transform: scale(1.1); filter: brightness(0.7); }
+.prod-img-wrapper::after { 
+    content: '✎'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+    color: var(--cyan); font-size: 16px; opacity: 0; transition: 0.3s; pointer-events: none;
+}
+.prod-img-wrapper:hover::after { opacity: 1; }
+
 </style>
 </head>
 <body>
@@ -286,7 +322,7 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
         <a href="QuanLyTinNhan.php" class="ni">&#x1F4AC; Quản lý tin nhắn</a>
         <?php endif; ?>
        
-        <a href="DangXuat.php" class="ni" style="color:#ef4444">🚪 Đăng xuất</a>
+        <a href="TrangChu.php" class="ni" style="color:#ef4444">🚪 Đăng xuất</a>
       </nav>
     </div>
   </aside>
@@ -297,15 +333,21 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
       <?php if ($sMsg): ?><div class="al ok">&#x2705; <?= htmlspecialchars($sMsg) ?></div><?php endif; ?>
       <?php if ($error): ?><div class="al er">&#x274C; <?= htmlspecialchars($error) ?></div><?php endif; ?>
 
-      <div class="tabs">
-        <button class="tb act" onclick="sw('view',this)">&#x1F441; Xem thông tin</button>
-        
-        <?php if ($user['VaiTro'] == 1): ?>
-            <button class="tb" onclick="sw('add_sp',this)">&#x1F4E6; Thêm Sản Phẩm</button>
-        <?php else: ?>
-            <button class="tb" onclick="sw('edit',this)">&#x270F; Chỉnh sửa</button>
-        <?php endif; ?>
-      </div>
+
+
+<div class="tabs">
+    <button class="tb act" onclick="sw('view',this)">&#x1F441; Xem thông tin</button>
+    
+    <?php if ($user['VaiTro'] == 1): ?>
+        <button class="tb" onclick="sw('add_sp',this)">&#x1F4E6; Thêm Sản Phẩm</button>
+        <button class="tb" onclick="sw('update_stock',this)">⚙️ Cập Nhật Kho</button>
+    <?php else: ?>
+        <button class="tb" onclick="sw('edit',this)">&#x270F; Chỉnh sửa</button>
+    <?php endif; ?>
+</div>
+
+
+
 
       <div id="tv" class="tp act">
         <div class="st">Thông tin cá nhân</div>
@@ -437,6 +479,51 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
         </form>
       </div>
       <?php endif; ?>
+      
+      <?php if ($user['VaiTro'] == 1): ?>
+<div id="tuk" class="tp">
+    <div class="st">Quản lý tồn kho & Hình ảnh</div>
+    <div style="overflow-x: auto;">
+        <table class="stock-table">
+            <thead>
+                <tr style="background: transparent; color: var(--cyan); text-transform: uppercase; font-size: 11px; letter-spacing: 1px;">
+                    <th style="text-align: left; padding: 10px 15px;">ID</th>
+                    <th style="text-align: left; padding: 10px;">Ảnh</th>
+                    <th style="text-align: left; padding: 10px;">Sản phẩm</th>
+                    <th style="text-align: left; padding: 10px;">Số lượng</th>
+                    <th style="text-align: right; padding: 10px 15px;">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                $q_list = sqlsrv_query($conn, "SELECT MaSP, TenSP, SoLuongTon, HinhAnh FROM SanPham ORDER BY MaSP DESC");
+                while($row = sqlsrv_fetch_array($q_list, SQLSRV_FETCH_ASSOC)):
+                ?>
+                <tr>
+                    <td style="font-family: 'Orbitron'; color: var(--muted);">#<?= $row['MaSP'] ?></td>
+                    <td>
+                        <div class="prod-img-wrapper" onclick="document.getElementById('file-<?= $row['MaSP'] ?>').click()">
+                            <input type="file" id="file-<?= $row['MaSP'] ?>" onchange="updateProductImage(<?= $row['MaSP'] ?>)" style="display:none;" accept="image/*">
+                            <img src="<?= $row['HinhAnh'] ?>" id="img-<?= $row['MaSP'] ?>" onerror="this.src='https://via.placeholder.com/50x50?text=No+Img'">
+                        </div>
+                    </td>
+                    <td style="font-weight: 600; color: var(--tx);"><?= htmlspecialchars($row['TenSP']) ?></td>
+                    <td>
+                        <input type="number" id="stock-<?= $row['MaSP'] ?>" value="<?= $row['SoLuongTon'] ?>" 
+                               style="width:80px; background:var(--panel2); border:1.5px solid var(--border); color:var(--cyan); padding:6px 10px; border-radius:6px; outline:none; font-family: 'Orbitron';">
+                    </td>
+                    <td style="text-align: right;">
+                        <button onclick="saveStock(<?= $row['MaSP'] ?>)" class="btn bp" style="padding: 7px 18px; font-size: 11px; min-width: 80px;">
+                            LƯU
+                        </button>
+                    </td>
+                </tr>
+                <?php endwhile; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+<?php endif; ?>
 
     </div>
   </main>
@@ -445,36 +532,107 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
 <script>
 // JS phân luồng tab theo Role
 <?php if ($user['VaiTro'] == 1): ?>
-    const panels = {view:'tv', add_sp:'ts'};
+    const panels = {
+        view: 'tv',         // Tab Xem thông tin
+        add_sp: 'ts',       // Tab Thêm sản phẩm (Cũ)
+        update_stock: 'tuk' // Tab Quản lý kho (Mới)
+    };
 <?php else: ?>
-    const panels = {view:'tv', edit:'te'};
+    const panels = {
+        view: 'tv', 
+        edit: 'te'
+    };
 <?php endif; ?>
 
-function sw(name,btn){
-  Object.values(panels).forEach(id => document.getElementById(id).classList.remove('act'));
-  document.querySelectorAll('.tb').forEach(b => b.classList.remove('act'));
-  document.getElementById(panels[name]).classList.add('act');
-  btn.classList.add('act');
+// 2. Hàm chuyển đổi qua lại giữa các Tab (Giữ nguyên logic cũ của bạn)
+function sw(name, btn) {
+    // Ẩn tất cả các panel có trong danh sách panels
+    Object.values(panels).forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.classList.remove('act');
+    });
+    // Bỏ trạng thái sáng của tất cả các nút bấm Tab
+    document.querySelectorAll('.tb').forEach(b => b.classList.remove('act'));
+    
+    // Hiển thị panel được chọn và làm sáng nút bấm tương ứng
+    const target = document.getElementById(panels[name]);
+    if(target) {
+        target.classList.add('act');
+        btn.classList.add('act');
+    }
 }
-function swn(name){const btn=document.querySelector('.tb[onclick*="'+name+'"]');if(btn)sw(name,btn);}
 
+// 3. Hàm hỗ trợ chuyển tab bằng tên (Dùng cho window.onload)
+function swn(name){
+    const btn = document.querySelector('.tb[onclick*="'+name+'"]');
+    if(btn) sw(name, btn);
+}
+
+// 4. HÀM MỚI: Cập nhật số lượng kho bằng AJAX (Không làm hư code cũ)
+// TÁCH RIÊNG HÀM NÀY RA
+function updateProductImage(id) {
+    const fileInput = document.getElementById('file-' + id);
+    if (!fileInput.files[0]) return;
+
+    const fd = new FormData();
+    fd.append('action', 'update_product_img_ajax');
+    fd.append('id', id);
+    fd.append('HinhAnh', fileInput.files[0]);
+
+    document.getElementById('img-' + id).style.opacity = '0.5';
+
+    fetch('ChinhSuaProfile.php', { method: 'POST', body: fd })
+    .then(r => r.text())
+    .then(res => {
+        document.getElementById('img-' + id).style.opacity = '1';
+        // Xử lý kết quả trả về
+        if (res.trim().startsWith('uploads/')) {
+            document.getElementById('img-' + id).src = res.trim() + '?t=' + new Date().getTime(); // Thêm tham số để tránh cache
+            alert("✅ Đã cập nhật ảnh sản phẩm!");
+        } else {
+            console.error("Lỗi PHP:", res);
+            alert("❌ Lỗi: " + res);
+        }
+    })
+    .catch(err => alert("❌ Lỗi kết nối!"));
+}
+
+// HÀM SAVE STOCK ĐỂ RIÊNG
+function saveStock(id) {
+    const qty = document.getElementById('stock-' + id).value;
+    const fd = new FormData();
+    fd.append('action', 'quick_update_stock');
+    fd.append('id', id);
+    fd.append('qty', qty);
+
+    fetch('ChinhSuaProfile.php', { method: 'POST', body: fd })
+    .then(r => r.text())
+    .then(txt => {
+        if(txt.trim() === "OK") alert("✅ Thành công!");
+        else alert("❌ Lỗi: " + txt);
+    });
+}
+// 5. Các hàm xử lý Preview Avatar của bạn (Giữ nguyên)
 function prevAv(input){
-  if(!input.files[0])return;
-  const r=new FileReader();
-  r.onload=e=>{
-    document.getElementById('pi').src=e.target.result;
-    document.getElementById('pw').style.display='flex';
-    document.getElementById('mai').src=e.target.result;
-  };
-  r.readAsDataURL(input.files[0]);
+    if(!input.files[0]) return;
+    const r = new FileReader();
+    r.onload = e => {
+        document.getElementById('pi').src = e.target.result;
+        document.getElementById('pw').style.display = 'flex';
+        document.getElementById('mai').src = e.target.result;
+    };
+    r.readAsDataURL(input.files[0]);
 }
+
 function cancelPrev(){
-  document.getElementById('avi').value='';
-  document.getElementById('pw').style.display='none';
-  document.getElementById('mai').src=<?= json_encode($avSrc) ?>;
+    document.getElementById('avi').value = '';
+    document.getElementById('pw').style.display = 'none';
+    document.getElementById('mai').src = <?= json_encode($avSrc) ?>;
 }
-<?php if($success==='info'):?>window.onload=()=>swn('view');<?php endif;?>
-<?php if($success==='product'):?>window.onload=()=>swn('add_sp');<?php endif;?>
+
+// 6. Tự động mở tab tương ứng sau khi xử lý PHP xong (Giữ nguyên)
+<?php if($success==='info'): ?> window.onload = () => swn('view'); <?php endif; ?>
+<?php if($success==='product'): ?> window.onload = () => swn('add_sp'); <?php endif; ?>
 </script>
 </body>
 </html>
