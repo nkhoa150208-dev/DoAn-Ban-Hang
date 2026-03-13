@@ -11,7 +11,7 @@ CREATE TABLE NguoiDung (
     MaND        INT PRIMARY KEY IDENTITY(1,1),
     TenDangNhap VARCHAR(50)   UNIQUE NOT NULL,
     MatKhau     VARCHAR(255)  NOT NULL,
-    MatKhau3Lop INT           NOT NULL,
+    MatKhau3Lop VARCHAR(4)         NOT NULL,
     HoTen       NVARCHAR(100) NOT NULL,
     Email       VARCHAR(100)  UNIQUE,
     SoDienThoai VARCHAR(15),
@@ -21,6 +21,7 @@ CREATE TABLE NguoiDung (
     TrangThai   INT DEFAULT 1      -- 1: Hoạt động, 0: Bị khóa
 );
 GO
+ALTER TABLE NguoiDung ALTER COLUMN MatKhau3Lop VARCHAR(4) NOT NULL;
 
 -- 2. Danh mục sản phẩm
 CREATE TABLE DanhMuc (
@@ -184,3 +185,21 @@ INSERT INTO MaGiamGia (Code, LoaiGiam, GiaTri, GiamToiDa, DonToiThieu, SoLanDung
 GO
 select * from MaGiamGia
 ALTER TABLE DonHang ADD LyDoHuy NVARCHAR(500) NULL;
+
+--suamk3lop
+ALTER PROCEDURE sp_ThemNguoiDung
+    @PTenDangNhap VARCHAR(50),
+    @PMatKhau     VARCHAR(255),
+    @PMatKhau3Lop VARCHAR(4),   -- ĐÃ SỬA THÀNH VARCHAR(4)
+    @PHoTen       NVARCHAR(100),
+    @PEmail       VARCHAR(100),
+    @PSoDienThoai VARCHAR(15),
+    @PDiaChi      NVARCHAR(255),
+    @PVaiTro      INT = 0
+AS
+BEGIN
+    INSERT INTO NguoiDung
+        (TenDangNhap, MatKhau, MatKhau3Lop, HoTen, Email, SoDienThoai, DiaChi, VaiTro)
+    VALUES
+        (@PTenDangNhap, @PMatKhau, @PMatKhau3Lop, @PHoTen, @PEmail, @PSoDienThoai, @PDiaChi, @PVaiTro)
+END
