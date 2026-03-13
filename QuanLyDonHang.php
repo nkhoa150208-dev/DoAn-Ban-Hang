@@ -225,7 +225,6 @@ select.sel-tt{background:var(--navy);color:var(--tx);border:1px solid var(--bord
                 <option value="Chờ xử lý"  <?= $dh['TrangThai']==='Chờ xử lý' ?'selected':'' ?>>Cho xu ly</option>
                 <option value="Đang giao"   <?= $dh['TrangThai']==='Đang giao'  ?'selected':'' ?>>Dang giao</option>
                 <option value="Đã giao"     <?= $dh['TrangThai']==='Đã giao'    ?'selected':'' ?>>Da giao</option>
-                <option value="Đã hủy"      <?= $dh['TrangThai']==='Đã hủy'     ?'selected':'' ?>>Da huy</option>
               </select>
               <button type="submit" class="btn-luu">Luu</button>
             </form>
