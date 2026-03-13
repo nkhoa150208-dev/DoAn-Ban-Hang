@@ -183,3 +183,4 @@ INSERT INTO MaGiamGia (Code, LoaiGiam, GiaTri, GiamToiDa, DonToiThieu, SoLanDung
 ('NEWUSER', 0, 15, 200000, 0, 1);          -- Giam 15%, toi da 200k, khong gioi han don
 GO
 select * from MaGiamGia
+ALTER TABLE DonHang ADD LyDoHuy NVARCHAR(500) NULL;

@@ -140,6 +140,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: ChinhSuaProfile.php?s=info');
         exit;
     }
+    // XOA SAN PHAM
+    if (($_POST['action']??'') === 'delete_product' && $user['VaiTro']==1) {
+        $idDel = (int)($_POST['MaSP']??0);
+        sqlsrv_query($conn, "DELETE FROM ChiTietDonHang WHERE MaSP=?", [$idDel]);
+        sqlsrv_query($conn, "DELETE FROM YeuThich WHERE MaSP=?", [$idDel]);
+        sqlsrv_query($conn, "DELETE FROM SanPham WHERE MaSP=?", [$idDel]);
+        $sMsg = "Da xoa san pham #$idDel";
+    }
+
+    // SUA SAN PHAM
+    if (($_POST['action']??'') === 'edit_product' && $user['VaiTro']==1) {
+        $idEdit  = (int)($_POST['MaSP']??0);
+        $tenSP   = trim($_POST['TenSP']   ?? '');
+        $gia     = (float)($_POST['Gia']  ?? 0);
+        $slTon   = (int)($_POST['SoLuongTon'] ?? 0);
+        $maDM    = (int)($_POST['MaDM']   ?? 1);
+        $cpu     = trim($_POST['CPU']     ?? '');
+        $ram     = trim($_POST['RAM']     ?? '');
+        $oCung   = trim($_POST['O_Cung']  ?? '');
+        $manHinh = trim($_POST['ManHinh'] ?? '');
+        $baoHanh = trim($_POST['BaoHanh'] ?? '');
+        $moTa    = trim($_POST['MoTa']    ?? '');
+        sqlsrv_query($conn,
+            "UPDATE SanPham SET TenSP=?,Gia=?,SoLuongTon=?,MaDM=?,CPU=?,RAM=?,O_Cung=?,ManHinh=?,BaoHanh=?,MoTa=? WHERE MaSP=?",
+            [$tenSP,$gia,$slTon,$maDM,$cpu,$ram,$oCung,$manHinh,$baoHanh,$moTa,$idEdit]);
+        $sMsg = "Da cap nhat san pham #$idEdit";
+    }
 }
 
 // 7. CHUẨN BỊ ẢNH HIỂN THỊ
@@ -341,6 +368,7 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
     <?php if ($user['VaiTro'] == 1): ?>
         <button class="tb" onclick="sw('add_sp',this)">&#x1F4E6; Thêm Sản Phẩm</button>
         <button class="tb" onclick="sw('update_stock',this)">⚙️ Cập Nhật Kho</button>
+        <button class="tb" onclick="sw('sua_sp',this)">✏️ Sửa / Xóa SP</button>
     <?php else: ?>
         <button class="tb" onclick="sw('edit',this)">&#x270F; Chỉnh sửa</button>
     <?php endif; ?>
@@ -524,6 +552,95 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
     </div>
 </div>
 <?php endif; ?>
+<?php if ($user['VaiTro'] == 1): ?>
+<div id="tsp" class="tp">
+  <div class="st">Chỉnh sửa / Xóa sản phẩm</div>
+  <div style="overflow-x:auto">
+    <table class="stock-table">
+      <thead>
+        <tr style="color:var(--cyan);font-size:11px;letter-spacing:1px;text-transform:uppercase">
+          <th style="padding:10px 15px;text-align:left">ID</th>
+          <th style="padding:10px;text-align:left">Tên SP</th>
+          <th style="padding:10px;text-align:left">Giá</th>
+          <th style="padding:10px;text-align:left">Tồn kho</th>
+          <th style="padding:10px 15px;text-align:right">Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php
+        $q2 = sqlsrv_query($conn, "SELECT MaSP,TenSP,Gia,SoLuongTon FROM SanPham ORDER BY MaSP DESC");
+        while($r2 = sqlsrv_fetch_array($q2, SQLSRV_FETCH_ASSOC)):
+        ?>
+        <tr>
+          <td style="font-family:'Orbitron';color:var(--muted);padding:12px 15px">#<?= $r2['MaSP'] ?></td>
+          <td style="font-weight:600;padding:12px 10px"><?= htmlspecialchars($r2['TenSP']) ?></td>
+          <td style="color:var(--cyan);font-family:'Orbitron';font-size:12px;padding:12px 10px"><?= number_format($r2['Gia'],0,',','.') ?>đ</td>
+          <td style="padding:12px 10px"><?= $r2['SoLuongTon'] ?></td>
+          <td style="text-align:right;padding:12px 15px">
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+              <button onclick="openEdit(<?= $r2['MaSP'] ?>)" class="btn" style="padding:6px 14px;font-size:11px;background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.3)">✏️ Sửa</button>
+              <form method="post" style="display:inline" onsubmit="return confirm('Xoa san pham <?= htmlspecialchars($r2['TenSP']) ?>?')">
+                <input type="hidden" name="action" value="delete_product">
+                <input type="hidden" name="MaSP" value="<?= $r2['MaSP'] ?>">
+                <button type="submit" class="btn" style="padding:6px 14px;font-size:11px;background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.25)">🗑 Xóa</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        <?php endwhile; ?>
+      </tbody>
+    </table>
+  </div>
+</div>
+<?php endif; ?>
+
+<!-- MODAL SUA SAN PHAM -->
+<div id="editModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(6px)">
+  <div style="background:#0d1f38;border:1px solid rgba(0,229,255,.2);border-radius:14px;padding:28px;width:90%;max-width:620px;max-height:85vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div style="font-family:'Orbitron',monospace;font-size:14px;color:var(--cyan)">✏️ CHINH SUA SAN PHAM</div>
+      <button onclick="closeEdit()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer">✕</button>
+    </div>
+    <form method="post" id="editForm">
+      <input type="hidden" name="action" value="edit_product">
+      <input type="hidden" name="MaSP" id="eMaSP">
+      <div class="fg">
+        <div class="fi full">
+          <label>Tên sản phẩm <span style="color:#ef4444">*</span></label>
+          <input type="text" name="TenSP" id="eTenSP" required>
+        </div>
+        <div class="fi">
+          <label>Danh mục</label>
+          <select name="MaDM" id="eMaDM">
+            <option value="1">💻 Laptop</option>
+            <option value="2">📱 Điện thoại</option>
+          </select>
+        </div>
+        <div class="fi">
+          <label>Giá bán (VNĐ) <span style="color:#ef4444">*</span></label>
+          <input type="number" name="Gia" id="eGia" required>
+        </div>
+        <div class="fi">
+          <label>Số lượng tồn</label>
+          <input type="number" name="SoLuongTon" id="eSoLuong">
+        </div>
+        <div class="fi"><label>CPU</label><input type="text" name="CPU" id="eCPU"></div>
+        <div class="fi"><label>RAM</label><input type="text" name="RAM" id="eRAM"></div>
+        <div class="fi"><label>Ổ cứng</label><input type="text" name="O_Cung" id="eOCung"></div>
+        <div class="fi"><label>Màn hình</label><input type="text" name="ManHinh" id="eManHinh"></div>
+        <div class="fi"><label>Bảo hành</label><input type="text" name="BaoHanh" id="eBaoHanh"></div>
+        <div class="fi full">
+          <label>Mô tả</label>
+          <textarea name="MoTa" id="eMoTa"></textarea>
+        </div>
+      </div>
+      <div class="fa" style="margin-top:16px">
+        <button type="button" onclick="closeEdit()" class="btn bg2">Hủy</button>
+        <button type="submit" class="btn bp">💾 Lưu thay đổi</button>
+      </div>
+    </form>
+  </div>
+</div>
 
     </div>
   </main>
@@ -535,7 +652,8 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
     const panels = {
         view: 'tv',         // Tab Xem thông tin
         add_sp: 'ts',       // Tab Thêm sản phẩm (Cũ)
-        update_stock: 'tuk' // Tab Quản lý kho (Mới)
+        update_stock: 'tuk', // Tab Quản lý kho (Mới)
+        sua_sp: 'tsp' 
     };
 <?php else: ?>
     const panels = {
@@ -633,6 +751,32 @@ function cancelPrev(){
 // 6. Tự động mở tab tương ứng sau khi xử lý PHP xong (Giữ nguyên)
 <?php if($success==='info'): ?> window.onload = () => swn('view'); <?php endif; ?>
 <?php if($success==='product'): ?> window.onload = () => swn('add_sp'); <?php endif; ?>
+const spData = <?php
+    $allSP = sqlsrv_query($conn, "SELECT * FROM SanPham");
+    $arr = [];
+    while($r = sqlsrv_fetch_array($allSP, SQLSRV_FETCH_ASSOC)) $arr[$r['MaSP']] = $r;
+    echo json_encode($arr);
+?>;
+
+function openEdit(id) {
+    const sp = spData[id];
+    if (!sp) return;
+    document.getElementById('eMaSP').value    = sp.MaSP;
+    document.getElementById('eTenSP').value   = sp.TenSP;
+    document.getElementById('eMaDM').value    = sp.MaDM;
+    document.getElementById('eGia').value     = sp.Gia;
+    document.getElementById('eSoLuong').value = sp.SoLuongTon;
+    document.getElementById('eCPU').value     = sp.CPU     || '';
+    document.getElementById('eRAM').value     = sp.RAM     || '';
+    document.getElementById('eOCung').value   = sp.O_Cung  || '';
+    document.getElementById('eManHinh').value = sp.ManHinh || '';
+    document.getElementById('eBaoHanh').value = sp.BaoHanh || '';
+    document.getElementById('eMoTa').value    = sp.MoTa    || '';
+    document.getElementById('editModal').style.display = 'flex';
+}
+function closeEdit() {
+    document.getElementById('editModal').style.display = 'none';
+}
 </script>
 </body>
 </html>
