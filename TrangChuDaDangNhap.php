@@ -640,6 +640,19 @@ if ($stmt_hero) {
   }
 
   /* ── ANIMATIONS ── */
+  /* ── PHÂN TRANG SẢN PHẨM ── */
+  .product-pagination { display: flex; gap: 10px; justify-content: center; margin-top: 40px; width: 100%; }
+  .product-pagination button {
+      background: transparent; border: 1px solid var(--panel2); color: var(--muted);
+      width: 42px; height: 42px; border-radius: 8px; font-family: 'Orbitron', monospace;
+      font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.3s ease;
+      display: flex; align-items: center; justify-content: center;
+  }
+  .product-pagination button:hover { border-color: var(--cyan); color: var(--cyan); }
+  .product-pagination button.active {
+      border: 2px solid var(--cyan); color: var(--cyan); background: rgba(0, 229, 255, 0.1);
+      box-shadow: 0 0 15px rgba(0,229,255,0.3);
+  }
   .fade-in { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
   .fade-in.visible { opacity: 1; transform: translateY(0); }
 
@@ -676,7 +689,7 @@ if ($stmt_hero) {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    width: 60px;
+    width: auto;
 }
 button.NoiDung1 {
     display: flex;
@@ -714,7 +727,7 @@ button.NoiDung1:hover {
 
 <!-- NAV -->
 <nav>
-  <a class="logo" href="#"><span>KhoaOngNghiem</span><span> TechVN </span></a>
+  <a class="logo" href="#"><span>KON</span><span> TechVN </span></a>
   <div class="nav-links">
     <a href="#" class="active" id="nav-home">Trang Chủ</a>
     <a href="#products" id="nav-products">Sản Phẩm</a>
@@ -911,69 +924,41 @@ $(document).ready(function(){
     <h2 class="section-title">Sản Phẩm <em>Hot</em></h2>
     <div class="section-line"></div>
   </div>
-  <?php 
-      // KHAI BÁO BIẾN Ở ĐÂY ĐỂ CÁC NÚT BẤM BÊN DƯỚI HIỂU ĐƯỢC
-      $madm_filter = isset($_GET['danhmuc']) ? (int)$_GET['danhmuc'] : 0; 
-  ?>
+  
+  <?php $madm_filter = isset($_GET['danhmuc']) ? (int)$_GET['danhmuc'] : 0; ?>
   
   <div class="product-filters fade-in" id="bo-loc">
     <a href="TrangChuDaDangNhap.php#bo-loc" class="filter-btn <?= ($madm_filter == 0) ? 'active' : '' ?>" style="text-decoration:none; display:inline-block;">Tất Cả</a>
-    
     <a href="TrangChuDaDangNhap.php?danhmuc=1#bo-loc" class="filter-btn <?= ($madm_filter == 1) ? 'active' : '' ?>" style="text-decoration:none; display:inline-block;">Laptop</a>
-    
     <a href="TrangChuDaDangNhap.php?danhmuc=3#bo-loc" class="filter-btn <?= ($madm_filter == 3) ? 'active' : '' ?>" style="text-decoration:none; display:inline-block;">PC Gaming</a>
-    
     <a href="TrangChuDaDangNhap.php?danhmuc=2#bo-loc" class="filter-btn <?= ($madm_filter == 2) ? 'active' : '' ?>" style="text-decoration:none; display:inline-block;">Điện Thoại</a>
-    
     <a href="TrangChuDaDangNhap.php?danhmuc=4#bo-loc" class="filter-btn <?= ($madm_filter == 4) ? 'active' : '' ?>" style="text-decoration:none; display:inline-block;">Phụ Kiện</a>
-    
     <a href="TrangChuDaDangNhap.php?danhmuc=5#bo-loc" class="filter-btn <?= ($madm_filter == 5) ? 'active' : '' ?>" style="text-decoration:none; display:inline-block;">Gaming Gear</a>
   </div>
-  <div class="products-grid">
-
-
+<div class="products-grid" id="product-grid">
   
     <?php
-    // 1. THÊM 3 DÒNG KẾT NỐI NÀY VÀO ĐỂ CẤP QUYỀN VÀO SQL SERVER
-
-$serverName = "localhost\\SQLEXPRESS";
-$database   = "QLBanHang";
-
-$connectionInfo = [
-    "Database" => $database,
-    "TrustServerCertificate" => true,
-    "CharacterSet" => "UTF-8"   // <-- THÊM ĐÚNG DÒNG NÀY VÀO LÀ HẾT LỖI
-];
-
-$conn = sqlsrv_connect($serverName, $connectionInfo);
-
-if ($conn === false) {
-    die(print_r(sqlsrv_errors(), true));
-}
-
-    // 2. Câu lệnh lấy sản phẩm (Giữ nguyên như cũ)
-   $madm_filter = isset($_GET['danhmuc']) ? (int)$_GET['danhmuc'] : 0;
-
-    // Nếu có chọn danh mục thì lọc theo MaDM, nếu không (MaDM = 0) thì lấy tất cả
+    
+    // TRUY VẤN LẤY SẢN PHẨM KÈM THEO TÍNH TRUNG BÌNH SAO
     if ($madm_filter > 0) {
-        $sql_sp = "SELECT * FROM SanPham WHERE MaDM = ? ORDER BY MaSP DESC";
+        $sql_sp = "SELECT sp.*, 
+                   ISNULL((SELECT AVG(CAST(SoSao AS FLOAT)) FROM BinhLuan WHERE MaSP = sp.MaSP), 0) AS AvgSao,
+                   (SELECT COUNT(*) FROM BinhLuan WHERE MaSP = sp.MaSP) AS TotalBL
+                   FROM SanPham sp WHERE sp.MaDM = ? ORDER BY sp.MaSP DESC";
         $stmt_sp = sqlsrv_query($conn, $sql_sp, [$madm_filter]);
     } else {
-        $sql_sp = "SELECT * FROM SanPham ORDER BY MaSP DESC"; 
+        $sql_sp = "SELECT sp.*, 
+                   ISNULL((SELECT AVG(CAST(SoSao AS FLOAT)) FROM BinhLuan WHERE MaSP = sp.MaSP), 0) AS AvgSao,
+                   (SELECT COUNT(*) FROM BinhLuan WHERE MaSP = sp.MaSP) AS TotalBL
+                   FROM SanPham sp ORDER BY sp.MaSP DESC"; 
         $stmt_sp = sqlsrv_query($conn, $sql_sp);
     }
 
     if ($stmt_sp === false) {
         echo "Lỗi truy vấn sản phẩm: <pre>" . print_r(sqlsrv_errors(), true) . "</pre>";
     } else {
-        // Vòng lặp in ra từng sản phẩm
         while($row = sqlsrv_fetch_array($stmt_sp, SQLSRV_FETCH_ASSOC)) { 
-            // Xử lý thông số kỹ thuật
-            $specs = "";
-            if($row['CPU']) $specs .= $row['CPU'] . ' · ';
-            if($row['RAM']) $specs .= $row['RAM'] . ' · ';
-            if($row['O_Cung']) $specs .= $row['O_Cung'];
-            $specs = rtrim($specs, ' · '); 
+            $specs = implode(' · ', array_filter([$row['CPU'], $row['RAM'], $row['O_Cung']]));
     ?>
             
         <div class="product-card fade-in">
@@ -982,19 +967,28 @@ if ($conn === false) {
                 <img src="<?php echo htmlspecialchars($row['HinhAnh']); ?>" alt="Ảnh">
             <?php else: ?>
                 <div class="product-img">
-                    <?php echo ($row['MaDM'] == 1) ? '💻' : (($row['MaDM'] == 2) ? '📱' : '📦'); ?>
+                    <?php echo ($row['MaDM'] == 1 || $row['MaDM'] == 3) ? '💻' : (($row['MaDM'] == 2) ? '📱' : '📦'); ?>
                 </div>
             <?php endif; ?>
-        </div>
+            </div>
             
             <div class="product-info">
                 <div class="product-cat">Danh mục ID: <?php echo $row['MaDM']; ?></div>
                 <div class="product-name"><?php echo $row['TenSP']; ?></div>
                 
+                <div style="font-size: 12px; margin-bottom: 8px;">
+                    <?php if($row['TotalBL'] > 0): ?>
+                        <span style="color: #fbbf24;">★ <?= number_format($row['AvgSao'], 1) ?></span>
+                        <span style="color: var(--muted); margin-left: 4px;">(<?= $row['TotalBL'] ?> đánh giá)</span>
+                    <?php else: ?>
+                        <span style="color: var(--muted);">Chưa có đánh giá</span>
+                    <?php endif; ?>
+                </div>
+                
                 <div class="product-specs">
                     <?php echo $specs; ?><br>
                     <?php if($row['SoLuongTon'] > 0): ?>
-                        <span style="color: var(--green); font-weight: bold; font-size: 12px;">✅ Còn lại: <?php echo $row['SoLuongTon']; ?> sản phẩm</span>
+                        <span style="color: var(--green); font-weight: bold; font-size: 12px;">✅ Còn lại: <?php echo $row['SoLuongTon']; ?></span>
                     <?php else: ?>
                         <span style="color: #ef4444; font-weight: bold; font-size: 12px;">❌ Đã hết hàng</span>
                     <?php endif; ?>
@@ -1006,44 +1000,176 @@ if ($conn === false) {
                     </div>
                 </div>
                 
-                <div class="product-actions">
+                <div class="product-actions" style="position: relative; z-index: 10;">
                     <?php if($row['SoLuongTon'] > 0): ?>
                         <button class="btn-add" onclick="themVaoGio(<?php echo $row['MaSP']; ?>, this)">🛒 Thêm vào giỏ</button>
                     <?php else: ?>
                         <button class="btn-add" style="background: #475569; opacity: 0.6; cursor: not-allowed;" onclick="alert('Rất tiếc! Sản phẩm này hiện đã hết hàng.');">🚫 Hết hàng</button>
                     <?php endif; ?>
-                    
-                    <button class="btn-detail" onclick="window.location.href='ChiTietSanPham.php?id=<?php echo $row['MaSP']; ?>'">Chi tiết</button>
+                    <button class="btn-detail" onclick="window.location.href='ChiTietSanPham.php?id=<?= $row['MaSP']; ?>'">Chi tiết</button>
                 </div>
-            </div></div>
-
+            </div>
+        </div>
     <?php 
-        } // Kết thúc vòng lặp while
+        } 
     } 
     ?>
-
-    
+    </div> <div id="product-pagination" class="product-pagination"></div>
   </div>
-  
 </section>
-
 <!-- PROMO BANNER -->
+ <script>
+// --- HÀM PHÂN TRANG SẢN PHẨM TRANG CHỦ ---
+// --- HÀM PHÂN TRANG SẢN PHẨM TRANG CHỦ (TỰ ĐỘNG TRƯỢT 5 TRANG) ---
+function initProductPagination() {
+    const grid = document.getElementById('product-grid');
+    if (!grid) return;
+    
+    const cards = Array.from(grid.querySelectorAll('.product-card'));
+    const itemsPerPage = 8; // Số sản phẩm hiển thị trên 1 trang (có thể đổi thành 12, 16...)
+    const totalPages = Math.ceil(cards.length / itemsPerPage);
+    const paginationContainer = document.getElementById('product-pagination');
+    
+    if (totalPages <= 1) {
+        paginationContainer.style.display = 'none';
+        return;
+    }
+    
+    let currentPage = 1;
+    const maxVisibleButtons = 5; // Số lượng nút trang hiển thị tối đa (1 2 3 4 5)
+
+    // Hàm render lại các nút bấm
+    function renderPagination() {
+        paginationContainer.innerHTML = '';
+
+        // Tính toán trang bắt đầu và trang kết thúc
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisibleButtons / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisibleButtons - 1);
+
+        // Điều chỉnh lại nếu các trang ở cuối bị hụt (ví dụ: tổng 7 trang, đang ở trang 7)
+        if (endPage - startPage + 1 < maxVisibleButtons) {
+            startPage = Math.max(1, endPage - maxVisibleButtons + 1);
+        }
+
+        // Nút Prev (Mũi tên lùi ❮) - Chỉ hiện khi không phải trang 1
+        if (currentPage > 1) {
+            const prevBtn = document.createElement('button');
+            prevBtn.innerText = '❮';
+            prevBtn.onclick = () => { currentPage--; showPage(currentPage); };
+            paginationContainer.appendChild(prevBtn);
+        }
+
+        // Các nút số (1, 2, 3...)
+        for (let i = startPage; i <= endPage; i++) {
+            const btn = document.createElement('button');
+            btn.innerText = i;
+            btn.dataset.page = i;
+            if (i === currentPage) btn.classList.add('active'); // Đánh dấu trang hiện tại
+            btn.onclick = () => { currentPage = i; showPage(currentPage); };
+            paginationContainer.appendChild(btn);
+        }
+
+        // Nút Next (Mũi tên tiến ❯) - Chỉ hiện khi chưa đến trang cuối
+        if (currentPage < totalPages) {
+            const nextBtn = document.createElement('button');
+            nextBtn.innerText = '❯';
+            nextBtn.onclick = () => { currentPage++; showPage(currentPage); };
+            paginationContainer.appendChild(nextBtn);
+        }
+    }
+
+    // Hàm hiển thị sản phẩm của trang tương ứng
+    function showPage(page) {
+        cards.forEach((card, index) => {
+            if (index >= (page - 1) * itemsPerPage && index < page * itemsPerPage) {
+                card.style.display = 'block';
+                card.classList.remove('visible');
+                setTimeout(() => card.classList.add('visible'), 50);
+            } else {
+                card.style.display = 'none';
+            }
+        });
+        
+        // Cập nhật lại thanh phân trang
+        renderPagination();
+        
+        // Cuộn mượt lên đầu khu vực sản phẩm
+        document.getElementById('products').scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    // Mặc định gọi trang 1 khi mới vào
+    showPage(1);
+}
+document.addEventListener('DOMContentLoaded', initProductPagination);
+
+// Chạy hàm phân trang ngay khi web load xong
+document.addEventListener('DOMContentLoaded', initProductPagination);
+</script>
+<?php
+  // KHẮC PHỤC LỆCH MÚI GIỜ: Dùng giờ của PHP thay vì GETDATE() của SQL
+  $now = date('Y-m-d H:i:s');
+
+  // 1. THAY VÌ XÓA MẤT TÍCH, CHÚNG TA CHỈ "VÔ HIỆU HÓA" MÃ (Để mã còn hiện trong ví khách)
+  $sql_disable = "UPDATE MaGiamGia SET TrangThai = 0 WHERE (NgayHetHan IS NOT NULL AND NgayHetHan <= ?) OR DaDung >= SoLanDung";
+  sqlsrv_query($conn, $sql_disable, [$now]);
+
+  // 2. Kiểm tra xem có mã FLASH nào đang sống không
+  $sql_check = "SELECT TOP 1 * FROM MaGiamGia WHERE Code LIKE 'FLASH%' AND TrangThai = 1 AND NgayHetHan > ? ORDER BY MaMGG DESC";
+  $stmt_check = sqlsrv_query($conn, $sql_check, [$now]);
+  $promo = $stmt_check ? sqlsrv_fetch_array($stmt_check, SQLSRV_FETCH_ASSOC) : null;
+
+  // 3. Nếu chưa có mã FLASH (chưa từng tạo hoặc mã cũ vừa hết hạn), TẠO MÃ MỚI!
+  if (!$promo) {
+      $newCode = 'FLASH' . rand(1000, 9999);
+      $loaiGiam = rand(0, 1);
+      $giaTri = ($loaiGiam == 0) ? rand(10, 30) : rand(50000, 200000);
+      $giamToiDa = ($loaiGiam == 0) ? rand(100000, 500000) : 0;
+      $donToiThieu = rand(300000, 1500000);
+      $soLanDung = rand(3, 10);
+      $ngayHetHan = date('Y-m-d H:i:s', strtotime('+5 minutes'));
+
+      $sql_insert = "INSERT INTO MaGiamGia (Code, LoaiGiam, GiaTri, GiamToiDa, DonToiThieu, SoLanDung, NgayHetHan, TrangThai) VALUES (?, ?, ?, ?, ?, ?, ?, 1)";
+      sqlsrv_query($conn, $sql_insert, [$newCode, $loaiGiam, $giaTri, $giamToiDa, $donToiThieu, $soLanDung, $ngayHetHan]);
+
+      $stmt_check = sqlsrv_query($conn, $sql_check, [$now]);
+      $promo = sqlsrv_fetch_array($stmt_check, SQLSRV_FETCH_ASSOC);
+  }
+
+  // 4. Tính số giây còn lại cho Javascript
+  $time_left = 0;
+  if ($promo && $promo['NgayHetHan']) {
+      $time_left = $promo['NgayHetHan']->getTimestamp() - time();
+  }
+?>
+
+<?php if($promo): ?>
 <section class="promo-banner" id="promo">
   <div class="promo-inner">
     <div class="promo-text">
-      <div class="promo-tag">⚡ Flash Sale · Giới hạn thời gian</div>
-      <h2>GIẢM GIÁ <span class="hl">40%</span><br>CHO MỌI LAPTOP</h2>
-      <p>Chương trình khuyến mãi đặc biệt, số lượng có hạn — Đừng bỏ lỡ!</p>
+      <div class="promo-tag">⚡ FLASH SALE 5 PHÚT · Chỉ còn <?= $promo['SoLanDung'] - $promo['DaDung'] ?> lượt</div>
+      <h2>MÃ: <span class="hl"><?= htmlspecialchars($promo['Code']) ?></span></h2>
+      <p>
+        Giảm <?= $promo['LoaiGiam'] == 0 ? $promo['GiaTri'].'%' : number_format($promo['GiaTri'], 0, ',', '.').'đ' ?> 
+        cho đơn hàng từ <?= number_format($promo['DonToiThieu'], 0, ',', '.') ?>đ!
+      </p>
       <div class="promo-countdown">
-        <div class="countdown-unit"><div class="countdown-num" id="cd-h">08</div><div class="countdown-label">Giờ</div></div>
-        <div class="countdown-unit"><div class="countdown-num" id="cd-m">34</div><div class="countdown-label">Phút</div></div>
-        <div class="countdown-unit"><div class="countdown-num" id="cd-s">22</div><div class="countdown-label">Giây</div></div>
+        <div class="countdown-unit"><div class="countdown-num" id="cd-h">00</div><div class="countdown-label">Giờ</div></div>
+        <div class="countdown-unit"><div class="countdown-num" id="cd-m">00</div><div class="countdown-label">Phút</div></div>
+        <div class="countdown-unit"><div class="countdown-num" id="cd-s">00</div><div class="countdown-label">Giây</div></div>
       </div>
-      <button class="btn-primary">⚡ Xem Ngay</button>
+      
+      <form action="ChinhSuaProfile.php" method="POST" style="display:inline-block;">
+         <input type="hidden" name="action" value="save_coupon">
+         <input type="hidden" name="MaMGG" value="<?= $promo['MaMGG'] ?>">
+         <button type="submit" class="btn-primary" style="font-size: 14px; padding: 12px 24px;">
+            💾 Lưu vào thẻ giảm giá của bạn
+         </button>
+      </form>
     </div>
-    <div class="promo-visual">💻</div>
+    <div class="promo-visual">🎫</div>
   </div>
 </section>
+<?php endif; ?>
 
 <!-- FEATURES -->
 <section class="features">
@@ -1076,7 +1202,7 @@ if ($conn === false) {
 <footer id="footer">
   <div class="footer-grid">
     <div class="footer-brand">
-      <a class="logo"><span>TECH</span><span> STORE</span></a>
+  <a class="logo" href="#"><span>KON</span><span> TechVN </span></a>
       <p>Chuyên cung cấp thiết bị công nghệ chính hãng, giá tốt nhất thị trường. Hơn 10 năm kinh nghiệm phục vụ hàng triệu khách hàng.</p>
       <div class="footer-socials">
         <a class="social-btn" href="#">f</a>
@@ -1156,9 +1282,17 @@ document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
 
 
 // ── Countdown timer
-let total = 8*3600 + 34*60 + 22;
+// ── Countdown timer (ĐỒNG BỘ 100% VỚI THỜI GIAN SỐNG CỦA MÃ TRONG SQL)
+// ── Countdown timer (ĐỒNG BỘ 100% VỚI THỜI GIAN SỐNG CỦA MÃ TRONG SQL)
+let total = <?= max(0, $time_left) ?>;
+
 function updateCountdown(){
-  total = Math.max(0, total-1);
+  if(total <= 0) {
+      // Khi hết 5 phút (total về 0), tự động F5 lại trang để PHP tạo mã mới!
+      window.location.reload();
+      return;
+  }
+  total--;
   const h = Math.floor(total/3600);
   const m = Math.floor((total%3600)/60);
   const s = total%60;
@@ -1167,8 +1301,8 @@ function updateCountdown(){
   document.getElementById('cd-s').textContent = String(s).padStart(2,'0');
 }
 setInterval(updateCountdown, 1000);
-
-
+// Gọi ngay lần đầu để khỏi bị delay 1s
+updateCountdown();
 
 </script>
 

@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $result = ['success' => false, 'msg' => '', 'giam' => 0, 'tongSau' => $tongTienGoc];
 
     if (empty($code)) {
-        $result['msg'] = 'Vui long nhap ma giam gia!';
+        $result['msg'] = 'Vui lòng nhập mã giảm giá!';
     } else {
         $now = date('Y-m-d H:i:s');
         $stmt = sqlsrv_query($conn,
@@ -47,9 +47,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $mg = $stmt ? sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC) : null;
 
         if (!$mg) {
-            $result['msg'] = 'Ma giam gia khong hop le, het han hoac da het luot dung!';
+            $result['msg'] = 'Mã giảm giá không hợp lệ, hết hạn hoặc đã hết lượt dùng!';
         } elseif ($tongTienGoc < $mg['DonToiThieu']) {
-            $result['msg'] = 'Don hang toi thieu ' . number_format($mg['DonToiThieu'],0,',','.') . 'D de dung ma nay!';
+            $result['msg'] = 'Đơn tối thiểu ' . number_format($mg['DonToiThieu'],0,',','.') . 'đ để dùng mã này!';
         } else {
             if ($mg['LoaiGiam'] == 0) {
                 // Giam theo %
@@ -64,8 +64,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
             $result['success'] = true;
             $result['msg']     = ($mg['LoaiGiam']==0)
-                ? 'Ap dung thanh cong! Giam ' . $mg['GiaTri'] . '%' . ($mg['GiamToiDa']>0 ? ' (toi da '.number_format($mg['GiamToiDa'],0,',','.').'D)' : '')
-                : 'Ap dung thanh cong! Giam ' . number_format($giam,0,',','.') . 'D';
+                ? 'Áp dụng thành công! Giảm ' . $mg['GiaTri'] . '%' . ($mg['GiamToiDa']>0 ? ' (tối đa '.number_format($mg['GiamToiDa'],0,',','.').'đ)' : '')
+                : 'Áp dụng thành công! Giảm ' . number_format($giam,0,',','.') . 'đ';
             $result['giam']    = $giam;
             $result['tongSau'] = $tongSau;
             $result['maMGG']   = $mg['MaMGG'];
@@ -105,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $ghiChu    = $_POST['GhiChu']    ?? '';
 
     if (empty($maDC)) {
-        $error = "Vui long chon dia chi giao hang!";
+        $error = "Vui lòng chọn địa chỉ giao hàng!";
     } else {
         $stmt_dc = sqlsrv_query($conn, "SELECT * FROM SoDiaChi WHERE MaDC=? AND MaND=?", [$maDC, $user_id]);
         $dc      = sqlsrv_fetch_array($stmt_dc, SQLSRV_FETCH_ASSOC);
@@ -127,38 +127,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 sqlsrv_fetch($stmt_dh);
                 $maDH_Moi = sqlsrv_get_field($stmt_dh, 0);
 
-                // B. THÊM TỪNG MÓN VÀO BẢNG ChiTietDonHang VÀ TRỪ SỐ LƯỢNG TỒN KHO
                 foreach($_SESSION['giohang'] as $maSP => $sp) {
                     $soLuongMua = $sp['SoLuong'];
                     $giaBan = $sp['Gia'];
 
-                    // 1. Lưu vào bảng ChiTietDonHang
                     $sql_insert_ct = "INSERT INTO ChiTietDonHang (MaDH, MaSP, SoLuong, DonGia) VALUES (?, ?, ?, ?)";
                     sqlsrv_query($conn, $sql_insert_ct, [$maDH_Moi, $maSP, $soLuongMua, $giaBan]);
 
-                    // 2. Trừ số lượng tồn kho trong bảng SanPham
                     $sql_tru_kho = "UPDATE SanPham SET SoLuongTon = SoLuongTon - ? WHERE MaSP = ?";
                     sqlsrv_query($conn, $sql_tru_kho, [$soLuongMua, $maSP]);
                 }
-                // Tang luot da dung ma giam gia
+
                 if (isset($_SESSION['maGiamGia'])) {
-                    sqlsrv_query($conn,
-                        "UPDATE MaGiamGia SET DaDung = DaDung + 1 WHERE MaMGG = ?",
-                        [$_SESSION['maGiamGia']['MaMGG']]);
+                    $maMGG_DaDung = $_SESSION['maGiamGia']['MaMGG'];
+                    sqlsrv_query($conn, "UPDATE MaGiamGia SET DaDung = DaDung + 1 WHERE MaMGG = ?", [$maMGG_DaDung]);
+                    sqlsrv_query($conn, "UPDATE ViGiamGia SET TrangThaiSuDung = 1 WHERE MaND = ? AND MaMGG = ?", [$user_id, $maMGG_DaDung]);
+                    
                     unset($_SESSION['maGiamGia']);
                 }
 
                 unset($_SESSION['giohang']);
                 echo "<script>
-                    alert('Dat hang thanh cong! Ma don cua ban la #".$maDH_Moi."');
+                    alert('Đặt hàng thành công! Mã đơn của bạn là #".$maDH_Moi."');
                     window.location.href='DonHang.php';
                 </script>";
                 exit;
             } else {
-                $error = "Co loi xay ra khi tao don hang. Vui long thu lai!";
+                $error = "Có lỗi xảy ra khi tạo đơn hàng. Vui lòng thử lại!";
             }
         } else {
-            $error = "Dia chi giao hang khong hop le!";
+            $error = "Địa chỉ giao hàng không hợp lệ!";
         }
     }
 }
@@ -166,13 +164,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 // Lay danh sach dia chi
 $stmt_ds_dc = sqlsrv_query($conn, "SELECT * FROM SoDiaChi WHERE MaND=? ORDER BY MacDinh DESC", [$user_id]);
 $hasAddress = false;
+
+// ============================================================
+// LẤY DANH SÁCH MÃ GIẢM GIÁ ĐÃ LƯU TRONG VÍ ĐỂ HIỆN LÊN MODAL
+// ============================================================
+$sql_vi = "SELECT m.*, v.NgayLuu FROM ViGiamGia v 
+           JOIN MaGiamGia m ON v.MaMGG = m.MaMGG 
+           WHERE v.MaND = ? AND v.TrangThaiSuDung = 0
+           ORDER BY v.NgayLuu DESC";
+$stmt_vi = sqlsrv_query($conn, $sql_vi, [$user_id]);
+$savedCoupons = [];
+if ($stmt_vi) {
+    while($v = sqlsrv_fetch_array($stmt_vi, SQLSRV_FETCH_ASSOC)) {
+        $savedCoupons[] = $v;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Thanh Toan - QLBanHang</title>
+<title>Thanh Toán - QLBanHang</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Exo+2:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -197,7 +210,7 @@ body{font-family:'Exo 2',sans-serif;background:#050d1a;color:#e2eaf5;min-height:
 .code-wrap{display:flex;gap:8px;margin-bottom:12px}
 .code-input{flex:1;background:#0f2444;border:1.5px solid rgba(0,229,255,0.2);border-radius:8px;color:#fff;padding:10px 14px;font-family:'Exo 2',sans-serif;font-size:14px;outline:none;transition:.2s;text-transform:uppercase}
 .code-input:focus{border-color:#00e5ff;box-shadow:0 0 0 3px rgba(0,229,255,0.1)}
-.btn-apply{padding:10px 18px;border-radius:8px;background:rgba(0,229,255,0.15);color:#00e5ff;border:1.5px solid rgba(0,229,255,0.3);font-family:'Exo 2',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:.2s;white-space:nowrap}
+.btn-apply{padding:10px 14px;border-radius:8px;background:rgba(0,229,255,0.15);color:#00e5ff;border:1.5px solid rgba(0,229,255,0.3);font-family:'Exo 2',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:.2s;white-space:nowrap}
 .btn-apply:hover{background:rgba(0,229,255,0.25)}
 .code-msg{font-size:13px;padding:10px 14px;border-radius:8px;margin-bottom:12px;display:none}
 .code-ok{background:rgba(34,197,94,0.1);color:#4ade80;border:1px solid rgba(34,197,94,0.3)}
@@ -205,6 +218,16 @@ body{font-family:'Exo 2',sans-serif;background:#050d1a;color:#e2eaf5;min-height:
 .code-applied{display:flex;align-items:center;justify-content:space-between;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:8px;padding:10px 14px;margin-bottom:12px}
 .code-applied span{color:#4ade80;font-size:13px;font-weight:600}
 .btn-remove-code{background:none;border:none;color:#f87171;cursor:pointer;font-size:18px;line-height:1;padding:0 4px}
+
+/* MODAL CHON MA DA LUU */
+.modal-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); display:none; align-items:center; justify-content:center; z-index:999; backdrop-filter:blur(5px); }
+.modal-content { background:#0d1f38; border:1px solid rgba(0,229,255,0.2); border-radius:12px; width:90%; max-width:450px; padding:25px; position:relative; max-height:80vh; overflow-y:auto; }
+.modal-close { position:absolute; top:15px; right:15px; background:none; border:none; color:#7a92b0; font-size:20px; cursor:pointer; }
+.modal-close:hover { color:#ef4444; }
+.voucher-item { background:#0f2444; border:1px solid rgba(0,229,255,0.1); border-radius:8px; padding:15px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; transition:0.2s;}
+.voucher-item:hover { border-color:rgba(0,229,255,0.4); }
+/* Class dành cho mã bị mờ do không đủ điều kiện */
+.voucher-item.disabled { opacity:0.5; filter:grayscale(1); pointer-events:none; border-color:rgba(255,255,255,0.05); }
 
 .price-row{display:flex;justify-content:space-between;font-size:14px;padding:8px 0;color:#7a92b0}
 .price-row.discount{color:#4ade80}
@@ -227,17 +250,15 @@ textarea:focus,select:focus{border-color:#00e5ff}
 <input type="hidden" name="action" value="place_order">
 <div class="container">
 
-  <!-- COT TRAI -->
   <div>
-    <!-- DIA CHI -->
     <div class="card">
-      <div class="card-title">&#x1F4CD; CHON DIA CHI GIAO HANG</div>
+      <div class="card-title">&#x1F4CD; CHỌN ĐỊA CHỈ GIAO HÀNG</div>
       <?php while ($dc = sqlsrv_fetch_array($stmt_ds_dc, SQLSRV_FETCH_ASSOC)): $hasAddress = true; ?>
         <label class="addr-box">
           <input type="radio" name="MaDC" value="<?= $dc['MaDC'] ?>" <?= $dc['MacDinh']==1?'checked':'' ?> required>
           <div class="addr-info">
             <h4><?= htmlspecialchars($dc['HoTenNguoiNhan']) ?> - <?= htmlspecialchars($dc['SoDienThoai']) ?>
-              <?php if ($dc['MacDinh']==1): ?><span class="badge-default">Mac dinh</span><?php endif; ?>
+              <?php if ($dc['MacDinh']==1): ?><span class="badge-default">Mặc định</span><?php endif; ?>
             </h4>
             <p><?= htmlspecialchars($dc['DiaChiCuThe']) ?></p>
             <p><?= htmlspecialchars($dc['ThanhPho']) ?></p>
@@ -246,86 +267,80 @@ textarea:focus,select:focus{border-color:#00e5ff}
       <?php endwhile; ?>
       <?php if (!$hasAddress): ?>
         <div style="text-align:center;padding:20px;color:#7a92b0">
-          Ban chua co dia chi nao!<br><br>
-          <a href="diachigiaohang.php" class="btn-submit" style="display:inline-block;width:auto;text-decoration:none;padding:10px 20px;font-size:14px">+ Them dia chi moi</a>
+          Bạn chưa có địa chỉ nào!<br><br>
+          <a href="diachigiaohang.php" class="btn-submit" style="display:inline-block;width:auto;text-decoration:none;padding:10px 20px;font-size:14px">+ Thêm địa chỉ mới</a>
         </div>
       <?php else: ?>
         <div style="text-align:right;margin-top:8px">
-          <a href="diachigiaohang.php" class="btn-link">+ Them dia chi khac</a>
+          <a href="diachigiaohang.php" class="btn-link">+ Thêm địa chỉ khác</a>
         </div>
       <?php endif; ?>
     </div>
 
-    <!-- THANH TOAN & GHI CHU -->
     <div class="card">
-      <div class="card-title">&#x1F4B3; PHUONG THUC THANH TOAN</div>
+      <div class="card-title">&#x1F4B3; PHƯƠNG THỨC THANH TOÁN</div>
       <select name="ThanhToan">
-        <option value="COD">Tien mat khi nhan hang (COD)</option>
-        <option value="ChuyenKhoan">Chuyen khoan ngan hang</option>
-        <option value="Momo">Vi MoMo</option>
+        <option value="COD">Tiền mặt khi nhận hàng (COD)</option>
+        <option value="ChuyenKhoan">Chuyển khoản ngân hàng</option>
+        <option value="Momo">Ví MoMo</option>
       </select>
-      <div class="card-title">&#x1F4DD; GHI CHU</div>
-      <textarea name="GhiChu" rows="3" placeholder="Vi du: Giao gio hanh chinh..."></textarea>
+      <div class="card-title">&#x1F4DD; GHI CHÚ</div>
+      <textarea name="GhiChu" rows="3" placeholder="Ví dụ: Giao giờ hành chính..."></textarea>
     </div>
   </div>
 
-  <!-- COT PHAI -->
   <div>
     <div class="card">
-      <div class="card-title">&#x1F6D2; TOM TAT DON HANG</div>
+      <div class="card-title">&#x1F6D2; TÓM TẮT ĐƠN HÀNG</div>
 
-      <!-- Danh sach san pham -->
       <?php foreach ($_SESSION['giohang'] as $sp): ?>
         <div class="sp-item">
           <div>
             <div class="sp-name"><?= htmlspecialchars($sp['TenSP']) ?></div>
             <div class="sp-qty">x<?= $sp['SoLuong'] ?></div>
           </div>
-          <div class="sp-price"><?= number_format($sp['Gia']*$sp['SoLuong'],0,',','.') ?>d</div>
+          <div class="sp-price"><?= number_format($sp['Gia']*$sp['SoLuong'],0,',','.') ?>đ</div>
         </div>
       <?php endforeach; ?>
 
-      <!-- MA GIAM GIA -->
       <div style="margin-top:20px">
-        <div class="card-title" style="font-size:13px;margin-bottom:12px">&#x1F3AB; MA GIAM GIA</div>
+        <div class="card-title" style="font-size:13px;margin-bottom:12px">&#x1F3AB; MÃ GIẢM GIÁ</div>
 
         <?php if ($maGGInfo): ?>
-          <!-- Da ap dung -->
           <div class="code-applied">
-            <span>&#x2705; <?= htmlspecialchars($maGGInfo['Code']) ?> — Giam <?= number_format($giamGia,0,',','.') ?>d</span>
-            <a href="?remove_code=1"><button type="button" class="btn-remove-code" title="Xoa ma">&#x2715;</button></a>
+            <span>&#x2705; <?= htmlspecialchars($maGGInfo['Code']) ?> — Giảm <?= number_format($giamGia,0,',','.') ?>đ</span>
+            <a href="?remove_code=1"><button type="button" class="btn-remove-code" title="Xóa mã">&#x2715;</button></a>
           </div>
         <?php else: ?>
-          <!-- Chua ap dung -->
           <div class="code-wrap">
-            <input type="text" id="codeInput" class="code-input" placeholder="NHAP MA GIAM GIA">
-            <button type="button" class="btn-apply" onclick="applyCode()">AP DUNG</button>
+            <input type="text" id="codeInput" class="code-input" placeholder="NHẬP MÃ GIẢM GIÁ">
+            <button type="button" class="btn-apply" onclick="applyCode()">ÁP DỤNG</button>
+            <button type="button" class="btn-apply" style="background:rgba(168,85,247,0.15); color:#a855f7; border-color:rgba(168,85,247,0.3);" onclick="openVoucherModal()">💳 MÃ ĐÃ LƯU</button>
           </div>
           <div id="codeMsg" class="code-msg"></div>
         <?php endif; ?>
       </div>
 
-      <!-- TONG TIEN -->
       <div style="margin-top:16px">
         <div class="price-row">
-          <span>Tam tinh</span>
-          <span id="tongGoc"><?= number_format($tongTienGoc,0,',','.') ?>d</span>
+          <span>Tạm tính</span>
+          <span id="tongGoc"><?= number_format($tongTienGoc,0,',','.') ?>đ</span>
         </div>
         <div class="price-row discount">
-          <span>Giam gia</span>
-          <span id="soGiam">-<?= number_format($giamGia,0,',','.') ?>d</span>
+          <span>Giảm giá</span>
+          <span id="soGiam">-<?= number_format($giamGia,0,',','.') ?>đ</span>
         </div>
         <div class="total-row">
-          <span>TONG CONG</span>
-          <span id="tongSau"><?= number_format($tongTienSau,0,',','.') ?>d</span>
+          <span>TỔNG CỘNG</span>
+          <span id="tongSau"><?= number_format($tongTienSau,0,',','.') ?>đ</span>
         </div>
       </div>
 
       <button type="submit" class="btn-submit" <?= !$hasAddress?'disabled':'' ?>>
-        &#x26A1; XAC NHAN CHOT DON
+        &#x26A1; XÁC NHẬN CHỐT ĐƠN
       </button>
       <div style="text-align:center;margin-top:14px">
-        <a href="ChiTietGioHang.php" class="btn-link">&#x2190; Quay lai gio hang</a>
+        <a href="ChiTietGioHang.php" class="btn-link">&#x2190; Quay lại giỏ hàng</a>
       </div>
     </div>
   </div>
@@ -333,17 +348,85 @@ textarea:focus,select:focus{border-color:#00e5ff}
 </div>
 </form>
 
+<div class="modal-overlay" id="voucherModal">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeVoucherModal()">✕</button>
+        <div class="card-title" style="margin-top:0;">🎫 VÍ VOUCHER CỦA BẠN</div>
+        
+        <?php if(count($savedCoupons) > 0): ?>
+            <div style="max-height:400px; overflow-y:auto; padding-right:5px;">
+            <?php foreach($savedCoupons as $v): 
+                $loai = $v['LoaiGiam'] == 0 ? "Giảm ".$v['GiaTri']."%" : "Giảm ".number_format($v['GiaTri'],0,',','.')."đ";
+                $hsd = $v['NgayHetHan'] ? $v['NgayHetHan']->format('H:i d/m/Y') : "Không giới hạn";
+                
+                // KIỂM TRA MÃ CÒN SỐNG VÀ ĐỦ ĐIỀU KIỆN KHÔNG
+                $now = new DateTime();
+                $isExpired = ($v['NgayHetHan'] && $v['NgayHetHan'] <= $now); // Đã hết hạn chưa?
+                $isEnough = ($tongTienGoc >= $v['DonToiThieu']);             // Đơn đủ tiền chưa?
+                $isActive = ($v['TrangThai'] == 1);                          // Còn hoạt động không?
+                
+                // Mã chỉ sáng lên và cho bấm DÙNG nếu thỏa mãn toàn bộ
+                $isEligible = $isEnough && !$isExpired && $isActive;
+            ?>
+                <div class="voucher-item <?= $isEligible ? '' : 'disabled' ?>">
+                    <div>
+                        <h4 style="color:var(--cyan); margin:0 0 5px; font-family:'Orbitron'; font-size:16px;"><?= htmlspecialchars($v['Code']) ?></h4>
+                        <p style="font-size:12px; color:var(--text); margin:0 0 3px;"><?= $loai ?></p>
+                        
+                        <p style="font-size:11px; color: <?= $isEnough ? 'var(--muted)' : '#ef4444' ?>; margin:0 0 3px;">
+                            Đơn tối thiểu: <?= number_format($v['DonToiThieu'],0,',','.') ?>đ
+                        </p>
+                        
+                        <p style="font-size:11px; color: <?= !$isExpired ? 'var(--muted)' : '#ef4444' ?>; margin:0;">
+                            ⏳ Hạn dùng: <?= $hsd ?>
+                        </p>
+                    </div>
+                    
+                    <?php if($isEligible): ?>
+                        <button type="button" class="btn-apply" style="padding:6px 12px;" onclick="applySavedCode('<?= htmlspecialchars($v['Code']) ?>')">Dùng</button>
+                    <?php else: ?>
+                        <span style="font-size:11px; color:#ef4444; font-weight:bold;">
+                            <?= $isExpired ? 'Đã hết hạn' : (!$isActive ? 'Vô hiệu hóa' : 'Chưa đạt ĐK') ?>
+                        </span>
+                    <?php endif; ?>
+                </div>
+            <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <div style="text-align:center; padding:30px 10px; color:var(--muted);">
+                <div style="font-size:40px; margin-bottom:10px;">🛒</div>
+                Bạn chưa lưu mã giảm giá nào.<br>Hãy săn mã ở Trang Chủ nhé!
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
+
 <script>
 const tongGoc = <?= $tongTienGoc ?>;
 
 function formatMoney(n) {
-  return n.toLocaleString('vi-VN') + 'd';
+  return n.toLocaleString('vi-VN') + 'đ';
+}
+
+function openVoucherModal() {
+    document.getElementById('voucherModal').style.display = 'flex';
+}
+
+function closeVoucherModal() {
+    document.getElementById('voucherModal').style.display = 'none';
+}
+
+// Khi người dùng bấm "Dùng" trong Modal
+function applySavedCode(code) {
+    closeVoucherModal();
+    document.getElementById('codeInput').value = code; // Tự động điền mã vào ô
+    applyCode(); // Gọi hàm áp dụng mã
 }
 
 function applyCode() {
   const code = document.getElementById('codeInput').value.trim();
   const msg  = document.getElementById('codeMsg');
-  if (!code) { showMsg('Vui long nhap ma giam gia!', false); return; }
+  if (!code) { showMsg('Vui lòng nhập mã giảm giá!', false); return; }
 
   fetch('xu_ly_dat_hang.php', {
     method: 'POST',
@@ -356,13 +439,13 @@ function applyCode() {
       showMsg(data.msg, true);
       document.getElementById('soGiam').textContent = '-' + formatMoney(data.giam);
       document.getElementById('tongSau').textContent = formatMoney(data.tongSau);
-      // Reload de hien thi trang thai da ap dung
+      // Reload để hiển thị trạng thái đã áp dụng
       setTimeout(() => location.reload(), 1000);
     } else {
       showMsg(data.msg, false);
     }
   })
-  .catch(() => showMsg('Loi ket noi, thu lai!', false));
+  .catch(() => showMsg('Lỗi kết nối, thử lại!', false));
 }
 
 function showMsg(text, ok) {
@@ -380,4 +463,3 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
-<?php sqlsrv_close($conn); ?>
