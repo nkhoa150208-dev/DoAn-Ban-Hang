@@ -313,3 +313,33 @@ INSERT INTO SanPham (TenSP, MaDM, Gia, SoLuongTon, KetNoi, TuongThich, BaoHanh, 
 (N'Ghế Gaming DXRacer Master', 5, 8900000, 8, N'Không', N'Không', N'24 tháng', N'Chất liệu da Microfiber, ngả lưng 155 độ.'),
 (N'Giá treo tai nghe Corsair ST100', 5, 1200000, 20, N'USB 3.1', N'PC', N'24 tháng', N'Vỏ nhôm cao cấp, tích hợp DAC giả lập 7.1 và LED RGB.');
 GO
+--thêm ví giãm giá
+USE QLBanHang;
+GO
+CREATE TABLE ViGiamGia (
+    MaVi INT IDENTITY(1,1) PRIMARY KEY,
+    MaND INT NOT NULL FOREIGN KEY REFERENCES NguoiDung(MaND),
+    MaMGG INT NOT NULL FOREIGN KEY REFERENCES MaGiamGia(MaMGG),
+    NgayLuu DATETIME DEFAULT GETDATE(),
+    TrangThaiSuDung INT DEFAULT 0 -- 0: Chưa dùng, 1: Đã dùng
+);
+GO
+--bình luận
+USE QLBanHang;
+GO
+
+CREATE TABLE BinhLuan (
+    MaBL INT IDENTITY(1,1) PRIMARY KEY,
+    MaSP INT NOT NULL FOREIGN KEY REFERENCES SanPham(MaSP),
+    MaND INT NOT NULL FOREIGN KEY REFERENCES NguoiDung(MaND),
+    NoiDung NVARCHAR(MAX) NOT NULL,
+    NgayBL DATETIME DEFAULT GETDATE()
+);
+GO
+
+select * from NguoiDung
+--bình luận 5 sao
+USE QLBanHang;
+GO
+ALTER TABLE BinhLuan ADD SoSao INT NOT NULL DEFAULT 5;
+GO
