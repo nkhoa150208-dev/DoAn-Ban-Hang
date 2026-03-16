@@ -343,3 +343,16 @@ USE QLBanHang;
 GO
 ALTER TABLE BinhLuan ADD SoSao INT NOT NULL DEFAULT 5;
 GO
+--trạng thaishoatj đông
+USE QLBanHang;
+GO
+ALTER TABLE NguoiDung ADD NgayHoatDong DATETIME NULL;
+GO
+--đăng nhập face(test)
+USE QLBanHang;
+GO
+ALTER TABLE NguoiDung ADD FacebookID VARCHAR(100) NULL;
+GO
+--update mã hìn
+ALTER TABLE NguoiDung ALTER COLUMN Avatar VARCHAR(MAX);
+GO

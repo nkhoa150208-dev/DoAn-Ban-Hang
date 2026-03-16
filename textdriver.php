@@ -1,5 +1,1 @@
-
-<?php echo "Xin chào khoav ngu  âfaffaf!"; ?>
-
-<?php echo "Xin chào khoaonggnhiem"; ?>
-<?php echo "Xin chào khoaonggnhiem"; ?>
+<img src="Image/KONTECH.jpg" width="800px" height="800px" alt="">

@@ -10,7 +10,8 @@ if ($conn === false) die(print_r(sqlsrv_errors(), true));
 // 2. KIỂM TRA ĐĂNG NHẬP
 if (!isset($_SESSION['MaND'])) { header('Location: DangNhap.php'); exit; }
 $user_id = (int)$_SESSION['MaND'];
-
+// Cập nhật thời gian hoạt động mới nhất của User vào Database
+sqlsrv_query($conn, "UPDATE NguoiDung SET NgayHoatDong = GETDATE() WHERE MaND = ?", [$user_id]);
 // 3. LẤY THÔNG TIN USER
 $res  = sqlsrv_query($conn, "SELECT * FROM dbo.NguoiDung WHERE MaND=?", [$user_id]);
 $user = $res ? sqlsrv_fetch_array($res, SQLSRV_FETCH_ASSOC) : null;
@@ -321,11 +322,11 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
     text-decoration: none;
     margin-right: 16px;
 
-}
+}.logo span:first-child { color: var(--cyan); }
+  .logo span:last-child { color: var(--text); }
 .addr-card { background: var(--panel2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-start; }
 .badge-default { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.3); padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: bold; text-transform: uppercase; margin-left: 8px;}
-  .logo span:first-child { color: var(--cyan); }
-  .logo span:last-child { color: var(--text); }
+  
 /* BẢNG CHUNG ADMIN */
 .stock-table { width:100%; border-collapse: separate; border-spacing: 0 8px; font-size: 13px; }
 .stock-table tr { background: rgba(13, 31, 56, 0.4); transition: 0.3s; }
@@ -347,7 +348,7 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
 <div class="topbar">
  <a class="logo" href="#"><span>KON</span><span> TechVN </span></a>  <div class="tr">
     <img class="tav" src="<?= htmlspecialchars($avSrc) ?>" alt="">
-    <span><?= htmlspecialchars($user['TenDangNhap']) ?></span>
+    <span><?= htmlspecialchars($user['HoTen']) ?></span>
   </div>
   <a href="TrangChuDaDangNhap.php" class="back">&#x2190; Trang Chủ</a>
 </div>
@@ -445,30 +446,33 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
 
       <div id="t_dh_khach" class="tp">
         <div class="st">&#x1F4E6; Đơn hàng của tôi</div>
+        
         <?php if ($dsDH && sqlsrv_has_rows($dsDH)): ?>
-          <?php while ($dh = sqlsrv_fetch_array($dsDH, SQLSRV_FETCH_ASSOC)): 
-            $c = $ttColor[$dh['TrangThai']] ?? '#888899';
-            $isPendingCancel = ($dh['TrangThai'] === 'Chờ xác nhận hủy');
-            $canCancel = ($dh['TrangThai'] === 'Chờ xử lý');
-          ?>
-            <div class="order-item <?= $isPendingCancel ? 'pending-cancel' : '' ?>">
-              <div>
-                <div class="order-id">Đơn #<?= $dh['MaDH'] ?></div>
-                <div class="order-date"><?= ($dh['NgayDat'] instanceof DateTime) ? $dh['NgayDat']->format('d/m/Y H:i') : '' ?></div>
-                <?php if ($isPendingCancel && !empty($dh['LyDoHuy'])): ?>
-                  <div style="font-size:12px; color:var(--orange); margin-top:6px;">&#x23F3; Chờ admin duyệt hủy: "<?= htmlspecialchars($dh['LyDoHuy']) ?>"</div>
-                <?php endif; ?>
-              </div>
-              <div class="badge-status" style="background:<?= $c ?>22;color:<?= $c ?>;border:1px solid <?= $c ?>55"><?= htmlspecialchars($dh['TrangThai']) ?></div>
-              <div class="order-total"><?= number_format($dh['TongTien'],0,',','.') ?>đ</div>
-              <div style="display:flex;gap:8px;align-items:center;">
-                <?php if ($canCancel): ?>
-                  <button class="btn-huy" onclick="openHuyModal(<?= $dh['MaDH'] ?>)">&#x274C; Yêu cầu hủy</button>
-                <?php endif; ?>
-                <a href="?id_don=<?= $dh['MaDH'] ?>" class="btn-det">Chi tiết</a>
-              </div>
-            </div>
-          <?php endwhile; ?>
+          <div id="khach-order-list">
+              <?php while ($dh = sqlsrv_fetch_array($dsDH, SQLSRV_FETCH_ASSOC)): 
+                $c = $ttColor[$dh['TrangThai']] ?? '#888899';
+                $isPendingCancel = ($dh['TrangThai'] === 'Chờ xác nhận hủy');
+                $canCancel = ($dh['TrangThai'] === 'Chờ xử lý');
+              ?>
+                <div class="order-item <?= $isPendingCancel ? 'pending-cancel' : '' ?>">
+                  <div>
+                    <div class="order-id">Đơn #<?= $dh['MaDH'] ?></div>
+                    <div class="order-date"><?= ($dh['NgayDat'] instanceof DateTime) ? $dh['NgayDat']->format('d/m/Y H:i') : '' ?></div>
+                    <?php if ($isPendingCancel && !empty($dh['LyDoHuy'])): ?>
+                      <div style="font-size:12px; color:var(--orange); margin-top:6px;">&#x23F3; Chờ admin duyệt hủy: "<?= htmlspecialchars($dh['LyDoHuy']) ?>"</div>
+                    <?php endif; ?>
+                  </div>
+                  <div class="badge-status" style="background:<?= $c ?>22;color:<?= $c ?>;border:1px solid <?= $c ?>55"><?= htmlspecialchars($dh['TrangThai']) ?></div>
+                  <div class="order-total"><?= number_format($dh['TongTien'],0,',','.') ?>đ</div>
+                  <div style="display:flex;gap:8px;align-items:center;">
+                    <?php if ($canCancel): ?>
+                      <button class="btn-huy" onclick="openHuyModal(<?= $dh['MaDH'] ?>)">&#x274C; Yêu cầu hủy</button>
+                    <?php endif; ?>
+                    <a href="?id_don=<?= $dh['MaDH'] ?>" class="btn-det">Chi tiết</a>
+                  </div>
+                </div>
+              <?php endwhile; ?>
+          </div>
         <?php else: ?>
           <div style="text-align:center; padding:40px; color:var(--muted);">Bạn chưa có đơn hàng nào</div>
         <?php endif; ?>
@@ -790,27 +794,46 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
         </div>
       </div>
 
-      <div id="t_nd" class="tp">
+     <div id="t_nd" class="tp">
         <div class="st">&#x1F6E1; Quản lý người dùng</div>
         <div style="overflow-x:auto;">
             <table class="stock-table" id="table-nd">
-                <thead><tr style="color:var(--cyan);"><th style="padding:10px;">ID</th><th style="padding:10px;">Tài Khoản</th><th style="padding:10px;">SĐT</th><th style="padding:10px;">Vai Trò</th><th style="padding:10px;">Trạng Thái</th><th style="padding:10px; text-align:right;">Thao tác</th></tr></thead>
+                <thead><tr style="color:var(--cyan);"><th style="padding:10px;">ID</th><th style="padding:10px;">Tài Khoản</th><th style="padding:10px;">SĐT</th><th style="padding:10px;">Vai Trò</th><th style="padding:10px; text-align:center;">Trạng Thái</th><th style="padding:10px; text-align:right;">Thao tác</th></tr></thead>
                 <tbody>
                     <?php
                     $q_nd = sqlsrv_query($conn, "SELECT * FROM NguoiDung ORDER BY MaND DESC");
                     while($r = sqlsrv_fetch_array($q_nd, SQLSRV_FETCH_ASSOC)):
+                        
+                        // KIỂM TRA ONLINE / OFFLINE (Nếu tương tác trong vòng 5 phút = 300 giây thì tính là Online)
+                        $isOnline = false;
+                        if ($r['NgayHoatDong']) {
+                            $lastActive = $r['NgayHoatDong']->getTimestamp();
+                            if (time() - $lastActive <= 300) {
+                                $isOnline = true;
+                            }
+                        }
                     ?>
                     <tr>
                         <td style="font-family:'Orbitron'; padding:10px;">#<?= $r['MaND'] ?></td>
                         <td style="font-weight:bold; color:var(--tx); padding:10px;">@<?= htmlspecialchars($r['TenDangNhap']) ?><br><span style="font-weight:normal;font-size:11px;color:var(--muted);"><?= htmlspecialchars($r['HoTen']) ?></span></td>
                         <td style="padding:10px;"><?= htmlspecialchars($r['SoDienThoai']) ?></td>
                         <td style="padding:10px;"><span class="rb" style="background: <?= $r['VaiTro']==1 ? 'rgba(168,85,247,0.2)' : 'rgba(0,229,255,0.1)' ?>; color: <?= $r['VaiTro']==1 ? 'var(--purple2)' : 'var(--cyan)' ?>;"><?= $r['VaiTro']==1 ? 'Admin' : 'Khách' ?></span></td>
-                        <td style="padding:10px;"><?= $r['TrangThai'] == 1 ? '<span style="color:var(--green); font-weight:bold;">● Hoạt động</span>' : '<span style="color:#ef4444; font-weight:bold;">● Bị khóa</span>' ?></td>
+                        
+                        <td style="padding:10px; text-align:center;">
+                            <?php if ($r['TrangThai'] == 0): ?>
+                                <span style="background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3); padding:4px 10px; border-radius:12px; font-size:11px; font-weight:bold; white-space:nowrap;">🚫 Bị khóa</span>
+                            <?php elseif ($isOnline): ?>
+                                <span style="background:rgba(34,197,94,0.15); color:#4ade80; border:1px solid rgba(34,197,94,0.3); padding:4px 10px; border-radius:12px; font-size:11px; font-weight:bold; white-space:nowrap;">● Online</span>
+                            <?php else: ?>
+                                <span style="background:rgba(255,255,255,0.05); color:var(--muted); border:1px solid rgba(255,255,255,0.1); padding:4px 10px; border-radius:12px; font-size:11px; font-weight:bold; white-space:nowrap;">● Offline</span>
+                            <?php endif; ?>
+                        </td>
+
                         <td style="padding:10px; text-align:right;">
                             <?php if($r['VaiTro'] != 1): ?>
                             <div style="display:flex; gap:5px; justify-content:flex-end;">
-                                <form method="post" style="margin:0;"><input type="hidden" name="action" value="toggle_user"><input type="hidden" name="MaND" value="<?= $r['MaND'] ?>"><input type="hidden" name="TrangThaiMoi" value="<?= $r['TrangThai'] == 1 ? 0 : 1 ?>"><button class="btn" style="padding:5px 10px; font-size:11px; <?= $r['TrangThai'] == 1 ? 'background:rgba(239,68,68,0.1);color:#f87171;border:1px solid #f87171;' : 'background:rgba(34,197,94,0.1);color:#4ade80;border:1px solid #4ade80;' ?>"><?= $r['TrangThai'] == 1 ? '🔒 Khóa' : '🔓 Mở' ?></button></form>
-                                <form method="post" style="margin:0;" onsubmit="return confirm('Xóa tài khoản này vĩnh viễn?');"><input type="hidden" name="action" value="delete_user"><input type="hidden" name="MaND" value="<?= $r['MaND'] ?>"><button type="submit" class="btn" style="padding:5px 10px; font-size:11px; background:var(--panel2); color:var(--muted); border:1px solid var(--muted);">🗑 Xóa</button></form>
+                                <form method="post" style="margin:0;"><input type="hidden" name="action" value="toggle_user"><input type="hidden" name="MaND" value="<?= $r['MaND'] ?>"><input type="hidden" name="TrangThaiMoi" value="<?= $r['TrangThai'] == 1 ? 0 : 1 ?>"><button class="btn" style="padding:5px 10px; font-size:11px; <?= $r['TrangThai'] == 1 ? 'background:rgba(239,68,68,0.1);color:#f87171;border:1px solid rgba(239,68,68,0.3);' : 'background:rgba(34,197,94,0.1);color:#4ade80;border:1px solid rgba(34,197,94,0.3);' ?>"><?= $r['TrangThai'] == 1 ? '🔒 Khóa' : '🔓 Mở' ?></button></form>
+                                <form method="post" style="margin:0;" onsubmit="return confirm('Xóa tài khoản này vĩnh viễn?');"><input type="hidden" name="action" value="delete_user"><input type="hidden" name="MaND" value="<?= $r['MaND'] ?>"><button type="submit" class="btn" style="padding:5px 10px; font-size:11px; background:var(--panel2); color:var(--muted); border:1px solid var(--border);">🗑 Xóa</button></form>
                             </div>
                             <?php endif; ?>
                         </td>
@@ -1005,24 +1028,91 @@ function removeFav(maSP) {
 function openHuyModal(id) { document.getElementById('txtModalMaDH').textContent = id; document.getElementById('inpModalMaDH').value = id; document.getElementById('modalHuyDon').style.display = 'flex'; }
 
 // PHÂN TRANG JAVASCRIPT
-function paginateTable(tableId, rowsPerPage) {
-    const table = document.getElementById(tableId); if (!table) return;
-    const tbody = table.querySelector('tbody'); const rows = Array.from(tbody.querySelectorAll('tr'));
-    const totalPages = Math.ceil(rows.length / rowsPerPage); if (totalPages <= 1) return;
-    let nav = document.getElementById('nav-' + tableId);
-    if(!nav) { nav = document.createElement('div'); nav.id = 'nav-' + tableId; nav.className = 'pagination-nav'; table.parentNode.insertBefore(nav, table.nextSibling); }
-    nav.innerHTML = '';
+// --- PHÂN TRANG VẠN NĂNG (DÙNG CỬA SỔ TRƯỢT 1 2 3 4 5 ❯) ---
+function paginateList(containerId, itemSelector, rowsPerPage) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    // Tìm các phần tử cần phân trang (div hoặc tr)
+    const items = Array.from(container.querySelectorAll(itemSelector));
+    if (items.length === 0) return;
+
+    const totalPages = Math.ceil(items.length / rowsPerPage);
+    if (totalPages <= 1) return;
+
+    // Tạo thanh điều hướng nút bấm
+    let nav = document.getElementById('nav-' + containerId);
+    if(!nav) { 
+        nav = document.createElement('div'); 
+        nav.id = 'nav-' + containerId; 
+        nav.className = 'pagination-nav'; 
+        container.parentNode.insertBefore(nav, container.nextSibling); 
+    }
+
+    let currentPage = 1;
+    const maxVisibleButtons = 5; // Số nút hiển thị tối đa
+
+    function renderPagination() {
+        nav.innerHTML = '';
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisibleButtons / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisibleButtons - 1);
+
+        if (endPage - startPage + 1 < maxVisibleButtons) {
+            startPage = Math.max(1, endPage - maxVisibleButtons + 1);
+        }
+
+        // Nút Prev ❮
+        if (currentPage > 1) {
+            const prevBtn = document.createElement('button');
+            prevBtn.innerText = '❮';
+            prevBtn.onclick = () => { currentPage--; showPage(currentPage); };
+            nav.appendChild(prevBtn);
+        }
+
+        // Nút số 1, 2, 3...
+        for (let i = startPage; i <= endPage; i++) {
+            const btn = document.createElement('button');
+            btn.innerText = i;
+            btn.dataset.page = i;
+            if (i === currentPage) btn.classList.add('active');
+            btn.onclick = () => { currentPage = i; showPage(currentPage); };
+            nav.appendChild(btn);
+        }
+
+        // Nút Next ❯
+        if (currentPage < totalPages) {
+            const nextBtn = document.createElement('button');
+            nextBtn.innerText = '❯';
+            nextBtn.onclick = () => { currentPage++; showPage(currentPage); };
+            nav.appendChild(nextBtn);
+        }
+    }
+
     function showPage(page) {
-        rows.forEach((row, index) => { row.style.display = (index >= (page-1)*rowsPerPage && index < page*rowsPerPage) ? '' : 'none'; });
-        nav.querySelectorAll('button').forEach(b => b.classList.remove('active')); nav.querySelector(`button[data-page="${page}"]`).classList.add('active');
+        items.forEach((item, index) => {
+            if (index >= (page - 1) * rowsPerPage && index < page * rowsPerPage) {
+                item.style.display = ''; // Reset CSS display
+            } else {
+                item.style.display = 'none';
+            }
+        });
+        renderPagination();
     }
-    for (let i = 1; i <= totalPages; i++) {
-        const btn = document.createElement('button'); btn.innerText = i; btn.dataset.page = i; btn.onclick = () => showPage(i); nav.appendChild(btn);
-    }
+
     showPage(1);
 }
+
+// KHỞI CHẠY PHÂN TRANG CHO TOÀN BỘ CÁC TAB
 window.addEventListener('DOMContentLoaded', () => {
-    paginateTable('table-mgg', 10); paginateTable('table-dh', 10); paginateTable('table-nd', 10); paginateTable('table-tuk', 10); paginateTable('table-tsp', 10);
+    // Phân trang Đơn Hàng Của Khách (6 đơn/trang)
+    paginateList('khach-order-list', '.order-item', 6);
+    
+    // Phân trang Bảng của Admin (10 dòng/trang)
+    paginateList('table-mgg', 'tbody tr', 10); 
+    paginateList('table-dh', 'tbody tr', 10); 
+    paginateList('table-nd', 'tbody tr', 10); 
+    paginateList('table-tuk', 'tbody tr', 10); 
+    paginateList('table-tsp', 'tbody tr', 10);
 });
 
 // TỰ CHUYỂN TAB SAU KHI LÀM MỚI

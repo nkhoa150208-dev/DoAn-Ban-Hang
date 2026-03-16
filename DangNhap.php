@@ -7,8 +7,7 @@ session_start();
 <meta charset="UTF-8">
 <title>Đăng nhập</title>
 
-<link rel="stylesheet" href="css/TrangChu.css">
-<script src="TrangChu.js"></script>
+<link rel="stylesheet" href="css/TrangChu.css?v=<?php echo time(); ?>"><script src="js/TrangChu.js"></script>
 
 </head>
 
@@ -38,7 +37,14 @@ session_start();
 
 <!-- NÚT ĐĂNG NHẬP -->
 <div class="Giua">
-<button class="dnxduong" type="submit" name="login">Đăng nhập</button>
+    <button class="dnxduong" type="submit" name="login">Đăng nhập</button>
+</div>
+
+<div class="Giua">
+    <a href="fb_login.php" class="btn-fb">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/c/cd/Facebook_logo_%28square%29.png" width="24" style="border-radius:4px;">
+        Đăng nhập bằng Facebook
+    </a>
 </div>
 
 </form>

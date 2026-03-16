@@ -756,7 +756,7 @@ button.NoiDung1:hover {
 <div class="tr">
     <img class="tav" src="https://ui-avatars.com/api/?name=Qu%E1%BA%A3n+tr%E1%BB%8B+vi%C3%AAn&amp;background=6366f1&amp;color=fff&amp;size=200" alt="">
   <p class="sinon">
-      <?php echo $_SESSION['TenDangNhap']; ?>
+      <?php echo $_SESSION['HoTen']; ?>
     </p>
   
   </div>
@@ -1204,12 +1204,18 @@ document.addEventListener('DOMContentLoaded', initProductPagination);
     <div class="footer-brand">
   <a class="logo" href="#"><span>KON</span><span> TechVN </span></a>
       <p>Chuyên cung cấp thiết bị công nghệ chính hãng, giá tốt nhất thị trường. Hơn 10 năm kinh nghiệm phục vụ hàng triệu khách hàng.</p>
-      <div class="footer-socials">
-        <a class="social-btn" href="#">f</a>
-        <a class="social-btn" href="#">𝕏</a>
-        <a class="social-btn" href="#">in</a>
-        <a class="social-btn" href="#">▶</a>
-      </div>
+      <div id="main-content" class="footer-socials">
+  <a class="social-btn" href="javascript:void(0)" onclick="rickRoll()">f</a>
+  <a class="social-btn" href="javascript:void(0)" onclick="rickRoll()">X</a>
+  <a class="social-btn" href="javascript:void(0)" onclick="rickRoll()">in</a>
+  <a class="social-btn" href="javascript:void(0)" onclick="rickRoll()">▶</a>
+</div>
+
+<div id="video-tab" style="display:none; width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; background: black; z-index: 9999; text-align: center;">
+  <video id="myVideo" width="100%" height="100%" controls>
+    <source src="Image/video/rickroll.mp4" type="video/mp4">
+  </video>
+</div>
     </div>
     <div class="footer-col">
       <h5>Sản Phẩm</h5>
@@ -1547,6 +1553,20 @@ document.querySelectorAll('.nav-links a').forEach(link => {
         this.classList.add('active');
     });
 });
+</script>
+<script>
+  function rickRoll() {
+    // 1. Ẩn nội dung cũ đi
+    document.getElementById('main-content').style.display = 'none';
+    
+    // 2. Hiện phần video lên
+    var videoTab = document.getElementById('video-tab');
+    videoTab.style.display = 'block';
+    
+    // 3. Lấy thẻ video và ra lệnh phát (được phép có tiếng vì người dùng vừa click)
+    var video = document.getElementById('myVideo');
+    video.play();
+  }
 </script>
 </body>
 </html>
