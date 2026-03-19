@@ -6,7 +6,23 @@ body{
     background: linear-gradient(180deg,#020b18,#031a33);
     font-family: Arial, Helvetica, sans-serif;
 }
-
+.btn-fb {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background-color: #1877F2;
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: bold;
+    margin-top: 15px;
+    width: 100%;
+    transition: 0.3s;
+    font-family: sans-serif;
+    height: 45px;
+}
+.btn-fb:hover { background-color: #166fe5; box-shadow: 0 4px 15px rgba(24, 119, 242, 0.4); }
 p.Nhapmk3 {
     color: white;
     text-align: center;

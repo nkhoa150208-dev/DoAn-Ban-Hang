@@ -27,6 +27,13 @@ $database   = "QLBanHang";
 $connectionInfo = ["Database" => $database, "TrustServerCertificate" => true, "CharacterSet" => "UTF-8"];
 $conn = sqlsrv_connect($serverName, $connectionInfo);
 
+// Lấy số Xu hiện có của User
+$xuHienCo = 0;
+$stmt_xu = sqlsrv_query($conn, "SELECT XuTichLuy FROM NguoiDung WHERE MaND=?", [$user_id]);
+if ($stmt_xu && $row_xu = sqlsrv_fetch_array($stmt_xu, SQLSRV_FETCH_ASSOC)) {
+    $xuHienCo = $row_xu['XuTichLuy'] ?? 0;
+}
+
 // Lấy ngẫu nhiên 12 sản phẩm để làm hiệu ứng xoay vòng
 $sql_hero = "SELECT TOP 40 MaSP, TenSP, Gia, HinhAnh, MaDM FROM SanPham ORDER BY NEWID()"; 
 $stmt_hero = sqlsrv_query($conn, $sql_hero);
@@ -734,12 +741,14 @@ button.NoiDung1:hover {
     <a href="#promo" id="nav-promo">Khuyến Mãi</a>
     <a href="#footer" id="nav-footer">Liên Hệ</a>
   </div>
-<div class="nav-search">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-    <input type="text" id="search-input" placeholder="Tìm kiếm sản phẩm (vd: iPhone, Laptop)..." autocomplete="off">
+<form action="TimKiem.php" method="GET" class="nav-search" style="margin: 0; position: relative;">
+    <button type="submit" style="background:none; border:none; cursor:pointer; color:var(--muted); display:flex; align-items:center; transition:0.2s;" onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color='var(--muted)'">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    </button>
+    <input type="text" name="tukhoa" id="search-input" placeholder="Tìm kiếm sản phẩm (vd: iPhone, Laptop)..." autocomplete="off">
     
     <div id="search-results" class="search-dropdown"></div>
-  </div>
+  </form>
   
   <div class="nav-actions">
     
@@ -755,10 +764,10 @@ button.NoiDung1:hover {
         <button class="NoiDung1">
 <div class="tr">
     <img class="tav" src="https://ui-avatars.com/api/?name=Qu%E1%BA%A3n+tr%E1%BB%8B+vi%C3%AAn&amp;background=6366f1&amp;color=fff&amp;size=200" alt="">
-  <p class="sinon">
-      <?php echo $_SESSION['TenDangNhap']; ?>
-    </p>
-  
+<p class="sinon" style="text-align: left; line-height: 1.2;">
+      <?php echo $_SESSION['HoTen']; ?><br>
+      <span style="font-size: 11px; color: #fbbf24; font-weight: bold;">🪙 <?= number_format($xuHienCo,0,',','.') ?> Xu</span>
+  </p>  
   </div>
   
   </button>
@@ -1204,40 +1213,46 @@ document.addEventListener('DOMContentLoaded', initProductPagination);
     <div class="footer-brand">
   <a class="logo" href="#"><span>KON</span><span> TechVN </span></a>
       <p>Chuyên cung cấp thiết bị công nghệ chính hãng, giá tốt nhất thị trường. Hơn 10 năm kinh nghiệm phục vụ hàng triệu khách hàng.</p>
-      <div class="footer-socials">
-        <a class="social-btn" href="#">f</a>
-        <a class="social-btn" href="#">𝕏</a>
-        <a class="social-btn" href="#">in</a>
-        <a class="social-btn" href="#">▶</a>
-      </div>
+      <div id="main-content" class="footer-socials">
+  <a class="social-btn" href="javascript:void(0)" onclick="rickRoll()">f</a>
+  <a class="social-btn" href="javascript:void(0)" onclick="rickRoll()">X</a>
+  <a class="social-btn" href="javascript:void(0)" onclick="rickRoll()">in</a>
+  <a class="social-btn" href="javascript:void(0)" onclick="rickRoll()">▶</a>
+</div>
+
+<div id="video-tab" style="display:none; width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; background: black; z-index: 9999; text-align: center;">
+  <video id="myVideo" width="100%" height="100%" controls>
+    <source src="Image/video/rickroll.mp4" type="video/mp4">
+  </video>
+</div>
     </div>
     <div class="footer-col">
-      <h5>Sản Phẩm</h5>
-      <ul>
-        <li><a href="#">Laptop</a></li>
-        <li><a href="#">PC Gaming</a></li>
-        <li><a href="#">Điện Thoại</a></li>
-        <li><a href="#">Màn Hình</a></li>
-        <li><a href="#">Phụ Kiện</a></li>
-      </ul>
-    </div>
-    <div class="footer-col">
-      <h5>Hỗ Trợ</h5>
-      <ul>
-        <li><a href="#">Chính Sách Bảo Hành</a></li>
-        <li><a href="#">Đổi Trả Hàng</a></li>
-        <li><a href="#">Hướng Dẫn Mua</a></li>
-        <li><a href="#">FAQ</a></li>
-        <li><a href="#">Liên Hệ</a></li>
-      </ul>
-    </div>
+    <h5>Sản Phẩm</h5>
+    <ul>
+        <li><a href="TrangChuDaDangNhap.php?danhmuc=1#bo-loc">Laptop</a></li>
+        <li><a href="TrangChuDaDangNhap.php?danhmuc=3#bo-loc">PC Gaming</a></li>
+        <li><a href="TrangChuDaDangNhap.php?danhmuc=2#bo-loc">Điện Thoại</a></li>
+        <li><a href="TrangChuDaDangNhap.php?danhmuc=5#bo-loc">Gaming Gear</a></li>
+        <li><a href="TrangChuDaDangNhap.php?danhmuc=4#bo-loc">Phụ Kiện</a></li>
+    </ul>
+</div>
+   <div class="footer-col">
+    <h5>Hỗ Trợ</h5>
+    <ul>
+        <li><a href="HoTro.php?tab=baohanh">Chính Sách Bảo Hành</a></li>
+        <li><a href="HoTro.php?tab=doitra">Đổi Trả Hàng</a></li>
+        <li><a href="HoTro.php?tab=huongdan">Hướng Dẫn Mua</a></li>
+        <li><a href="HoTro.php?tab=faq">FAQ</a></li>
+        <li><a href="HoTro.php?tab=lienhe">Liên Hệ</a></li>
+    </ul>
+</div>
     <div class="footer-col">
       <h5>Liên Hệ</h5>
       <ul>
-        <li><a href="#">📍 123 Nguyễn Huệ, Q1, HCM</a></li>
-        <li><a href="#">📞 1800 9999</a></li>
-        <li><a href="#">✉️ support@techstore.vn</a></li>
-        <li><a href="#">🕐 8:00 – 22:00 (T2–CN)</a></li>
+        <li><a href="https://maps.app.goo.gl/pDcbB7M9vjnUZpNY9" target="_blank">📍390 Đ. Hoàng Văn Thụ, Phường 4, Tân Bình, Hồ Chí Minh, Việt Nam</a></li>
+        <li><a href="tel:0585246973">📞 0585 246 973</a></li>
+        <li><a href="mailto:thanhdoan1012008@gmail.com">✉️ thanhdoan1012008@gmail.com</a></li>
+        <li><a href="javascript:void(0)">🕐 8:00 – 22:00 (T2–CN)</a></li>
       </ul>
     </div>
   </div>
@@ -1347,7 +1362,7 @@ if (isset($_SESSION['TenDangNhap']) && $_SESSION['TenDangNhap'] !== 'admin') {
 
 <div id="chat-box">
     <div id="chat-header" onclick="toggleChat()">💬 Trò chuyện với Admin</div>
-    <div id="chat-body">
+    <div id="chat-body" style="display: none;">
         <div id="chat-content">
             </div>
         <div id="chat-input-area">
@@ -1547,6 +1562,20 @@ document.querySelectorAll('.nav-links a').forEach(link => {
         this.classList.add('active');
     });
 });
+</script>
+<script>
+  function rickRoll() {
+    // 1. Ẩn nội dung cũ đi
+    document.getElementById('main-content').style.display = 'none';
+    
+    // 2. Hiện phần video lên
+    var videoTab = document.getElementById('video-tab');
+    videoTab.style.display = 'block';
+    
+    // 3. Lấy thẻ video và ra lệnh phát (được phép có tiếng vì người dùng vừa click)
+    var video = document.getElementById('myVideo');
+    video.play();
+  }
 </script>
 </body>
 </html>
