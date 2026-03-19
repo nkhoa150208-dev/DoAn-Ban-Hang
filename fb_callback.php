@@ -43,26 +43,31 @@ if (isset($_GET['code'])) {
 // Tự tạo một email ảo duy nhất nếu Facebook không cung cấp
 $fb_email = $user_info['email'] ?? ($fb_id . '@fb.com');            $fb_avatar = $user_info['picture']['data']['url'] ?? '';
 
-            // 4. KIỂM TRA XEM KHÁCH NÀY ĐÃ TỪNG ĐĂNG NHẬP BẰNG FB CHƯA
+// 4. KIỂM TRA XEM KHÁCH NÀY ĐÃ TỪNG ĐĂNG NHẬP BẰNG FB CHƯA
             $sql_check = "SELECT * FROM NguoiDung WHERE FacebookID = ?";
             $stmt_check = sqlsrv_query($conn, $sql_check, [$fb_id]);
             
             if ($stmt_check && sqlsrv_has_rows($stmt_check)) {
-                // ĐÃ CÓ TÀI KHOẢN -> ĐĂNG NHẬP LUÔN
+                // ĐÃ CÓ TÀI KHOẢN -> LẤY DỮ LIỆU GÁN VÀO $row TRƯỚC
                 $row = sqlsrv_fetch_array($stmt_check, SQLSRV_FETCH_ASSOC);
                 
-                $_SESSION['MaND']        = $row['MaND'];
-                $_SESSION['TenDangNhap'] = $row['TenDangNhap'];
-                $_SESSION['HoTen']       = $row['HoTen'];
-                $_SESSION['VaiTro']      = $row['VaiTro'];
-                
-                header("Location: TrangChuDaDangNhap.php");
-                exit;
-           } else {
+                // KIỂM TRA XEM CÓ BỊ KHÓA KHÔNG
+                if ($row['TrangThai'] == 1) {
+                    $_SESSION['MaND']        = $row['MaND'];
+                    $_SESSION['TenDangNhap'] = $row['TenDangNhap'];
+                    $_SESSION['HoTen']       = $row['HoTen'];
+                    $_SESSION['VaiTro']      = $row['VaiTro'];
+                    
+                    header("Location: TrangChuDaDangNhap.php");
+                    exit;
+                } else { 
+                    die("<meta charset='utf-8'><script>alert('Tài khoản Facebook của bạn đã bị Admin khóa!'); window.location.href='DangNhap.php';</script>"); 
+                }
+            } else {
                 // CHƯA CÓ TÀI KHOẢN -> TỰ ĐỘNG TẠO TÀI KHOẢN MỚI
-// Lấy trọn bộ ID Facebook làm tên đăng nhập để không bao giờ bị trùng
-$username_moi = 'fb_' . $fb_id;                $mk_ao = 'facebook_login'; 
-                $mk_3lop = str_pad(rand(0, 9999), 4, '0', STR_PAD_LEFT); // Tự động tạo 4 số ngẫu nhiên cho MK 3 Lớp
+                $username_moi = 'fb_' . $fb_id; 
+                $mk_ao = 'facebook_login'; 
+                $mk_3lop = str_pad(rand(0, 9999), 4, '0', STR_PAD_LEFT); 
                 
                 $sql_insert = "INSERT INTO NguoiDung (TenDangNhap, MatKhau, MatKhau3Lop, HoTen, Email, FacebookID, Avatar, VaiTro) 
                                VALUES (?, ?, ?, ?, ?, ?, ?, 0)";
@@ -81,7 +86,6 @@ $username_moi = 'fb_' . $fb_id;                $mk_ao = 'facebook_login';
                     header("Location: TrangChuDaDangNhap.php");
                     exit;
                 } else {
-                    // In ra lỗi chi tiết nếu SQL vẫn từ chối
                     die("Lỗi tạo tài khoản vào CSDL: <pre>" . print_r(sqlsrv_errors(), true) . "</pre>");
                 }
             }

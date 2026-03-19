@@ -24,6 +24,12 @@ $mgError   = "";
 $giamGia   = 0;
 $maGGInfo  = null;
 
+// LẤY SỐ XU HIỆN CÓ TỪ DATABASE
+$stmt_xu = sqlsrv_query($conn, "SELECT XuTichLuy FROM NguoiDung WHERE MaND=?", [$user_id]);
+$u_info = sqlsrv_fetch_array($stmt_xu, SQLSRV_FETCH_ASSOC);
+$xuHienCo = (int)($u_info['XuTichLuy'] ?? 0);
+
+// Tinh tong tien gio hang$tongTienGoc = 0;
 // Tinh tong tien gio hang
 $tongTienGoc = 0;
 foreach ($_SESSION['giohang'] as $sp) {
@@ -113,12 +119,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $u       = sqlsrv_fetch_array($stmt_u, SQLSRV_FETCH_ASSOC);
         $email   = $u['Email'] ?? '';
 
-        if ($dc) {
+      if ($dc) {
+            // XỬ LÝ KHÁCH CÓ TICK CHỌN DÙNG XU HAY KHÔNG
+            $dungXu = isset($_POST['DungXu']) ? 1 : 0;
+            $tienTruXu = 0;
+            if ($dungXu == 1) {
+                $tienTruXu = $xuHienCo; // 1 Xu = 1đ
+                if ($tienTruXu > $tongTienSau) $tienTruXu = $tongTienSau; // Không trừ âm
+            }
+            $tongTienThanhToan = $tongTienSau - $tienTruXu;
+            
+            // THƯỞNG XU MỚI BẰNG 1% GIÁ TRỊ THANH TOÁN
+            $xuThuThuong = floor($tongTienThanhToan * 0.01);
+
             $sql_dh = "INSERT INTO DonHang (MaND, TongTien, HoTen, SoDienThoai, Email, DiaChi, ThanhPho, ThanhToan, GhiChu)
                        OUTPUT INSERTED.MaDH
                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt_dh = sqlsrv_query($conn, $sql_dh, [
-                $user_id, $tongTienSau,
+                $user_id, $tongTienThanhToan, // Sửa lại lưu tổng tiền cuối cùng
                 $dc['HoTenNguoiNhan'], $dc['SoDienThoai'], $email,
                 $dc['DiaChiCuThe'], $dc['ThanhPho'], $thanhToan, $ghiChu
             ]);
@@ -138,7 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     sqlsrv_query($conn, $sql_tru_kho, [$soLuongMua, $maSP]);
                 }
 
-                if (isset($_SESSION['maGiamGia'])) {
+               if (isset($_SESSION['maGiamGia'])) {
                     $maMGG_DaDung = $_SESSION['maGiamGia']['MaMGG'];
                     sqlsrv_query($conn, "UPDATE MaGiamGia SET DaDung = DaDung + 1 WHERE MaMGG = ?", [$maMGG_DaDung]);
                     sqlsrv_query($conn, "UPDATE ViGiamGia SET TrangThaiSuDung = 1 WHERE MaND = ? AND MaMGG = ?", [$user_id, $maMGG_DaDung]);
@@ -146,11 +164,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     unset($_SESSION['maGiamGia']);
                 }
 
+// CHỈ TRỪ XU NẾU KHÁCH CÓ TICK DÙNG XU (TUYỆT ĐỐI KHÔNG CỘNG XU MỚI Ở ĐÂY NỮA)
+                if ($tienTruXu > 0) {
+                    $sql_update_xu = "UPDATE NguoiDung SET XuTichLuy = XuTichLuy - ? WHERE MaND = ?";
+                    sqlsrv_query($conn, $sql_update_xu, [$tienTruXu, $user_id]);
+                }
                 unset($_SESSION['giohang']);
-                echo "<script>
-                    alert('Đặt hàng thành công! Mã đơn của bạn là #".$maDH_Moi."');
-                    window.location.href='DonHang.php';
-                </script>";
+                unset($_SESSION['giohang']);
+                
+                // --- PHÂN LUỒNG THANH TOÁN ---
+                if ($thanhToan === 'COD') {
+                    // Nếu là COD -> Báo thành công và về trang quản lý đơn
+                    echo "<script>
+                        alert('Đặt hàng thành công! Mã đơn của bạn là #".$maDH_Moi."');
+                        window.location.href='ChinhSuaProfile.php?s=donhang_khach';
+                    </script>";
+                } else {
+                    // Nếu là Chuyển khoản / MoMo -> Đẩy sang trang Quét QR
+                    echo "<script>
+                        window.location.href='ThanhToanQR.php?madh=".$maDH_Moi."';
+                    </script>";
+                }
                 exit;
             } else {
                 $error = "Có lỗi xảy ra khi tạo đơn hàng. Vui lòng thử lại!";
@@ -322,9 +356,21 @@ textarea:focus,select:focus{border-color:#00e5ff}
       </div>
 
       <div style="margin-top:16px">
+        <?php if ($xuHienCo > 0): ?>
+        <label style="display:flex; align-items:center; gap:8px; background:rgba(245,158,11,0.1); padding:12px; border-radius:8px; border:1px solid rgba(245,158,11,0.3); color:#fbbf24; cursor:pointer; font-size:14px; margin-bottom:12px;">
+            <input type="checkbox" name="DungXu" id="chkDungXu" value="1" onchange="tinhLaiTienDeHienThi()" style="accent-color:#f59e0b; width:18px; height:18px;">
+            Dùng <strong style="font-family:'Orbitron'; font-size:16px;"><?= number_format($xuHienCo,0,',','.') ?> Xu</strong> 
+            <span style="color:var(--muted); font-size:12px;">(Giảm <?= number_format($xuHienCo,0,',','.') ?>đ)</span>
+        </label>
+        <?php endif; ?>
+
         <div class="price-row">
           <span>Tạm tính</span>
           <span id="tongGoc"><?= number_format($tongTienGoc,0,',','.') ?>đ</span>
+        </div>
+        <div class="price-row discount" id="rowXu" style="display: none; color: #fbbf24;">
+          <span>Dùng Xu</span>
+          <span id="soTruXu">-0đ</span>
         </div>
         <div class="price-row discount">
           <span>Giảm giá</span>
@@ -438,9 +484,11 @@ function applyCode() {
     if (data.success) {
       showMsg(data.msg, true);
       document.getElementById('soGiam').textContent = '-' + formatMoney(data.giam);
-      document.getElementById('tongSau').textContent = formatMoney(data.tongSau);
-      // Reload để hiển thị trạng thái đã áp dụng
-      setTimeout(() => location.reload(), 1000);
+      
+      // GỌI HÀM TÍNH LẠI TIỀN ĐỂ TỔNG KẾT CẢ GIẢM GIÁ LẪN XU
+      tinhLaiTienDeHienThi();
+      
+      setTimeout(() => location.reload(), 1500); // Đợi xíu cho khách thấy chữ thành công rồi reload
     } else {
       showMsg(data.msg, false);
     }
@@ -455,11 +503,46 @@ function showMsg(text, ok) {
   el.style.display = 'block';
 }
 
+// --- HÀM TỰ ĐỘNG TÍNH LẠI TIỀN KHI BẤM DÙNG XU HOẶC NHẬP MÃ ---
+const soXuHienCo = <?= $xuHienCo ?>;
+
+function tinhLaiTienDeHienThi() {
+    let chk = document.getElementById('chkDungXu');
+    
+    // Lấy tổng gốc và giảm giá hiện tại (cắt bỏ ký tự đ và chấm)
+    let tongGocSo = parseInt(document.getElementById('tongGoc').textContent.replace(/\D/g,'')) || 0;
+    let giamGiaSo = parseInt(document.getElementById('soGiam').textContent.replace(/\D/g,'')) || 0;
+    let tongHienTai = tongGocSo - giamGiaSo;
+    
+    let tienTruXu = 0;
+    let rowXu = document.getElementById('rowXu');
+    let soTruXu = document.getElementById('soTruXu');
+
+    // Nếu khách có tick vào nút dùng Xu
+    if (chk && chk.checked) {
+        tienTruXu = soXuHienCo;
+        if (tienTruXu > tongHienTai) tienTruXu = tongHienTai; // Không cho trừ âm
+        
+        rowXu.style.display = 'flex';
+        soTruXu.textContent = '-' + formatMoney(tienTruXu);
+    } else {
+        if(rowXu) rowXu.style.display = 'none';
+        if(soTruXu) soTruXu.textContent = '-0đ';
+    }
+    
+    // Cập nhật lại tổng tiền thanh toán cuối cùng
+    let thanhToanCuoiCung = tongHienTai - tienTruXu;
+    document.getElementById('tongSau').textContent = formatMoney(thanhToanCuoiCung);
+}
+
 // Nhan Enter de ap dung ma
 document.addEventListener('DOMContentLoaded', () => {
   const inp = document.getElementById('codeInput');
   if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); applyCode(); } });
+  
+  // Khởi chạy tính tiền lần đầu tiên để đảm bảo tổng số chính xác
+  tinhLaiTienDeHienThi();
 });
 </script>
 </body>
-</html>
+</html> 

@@ -71,6 +71,19 @@ if (isset($_POST['login'])) {
     }
 
     if ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+    // THÊM ĐOẠN NÀY ĐỂ KIỂM TRA KHÓA
+    if ($row['TrangThai'] == 0) {
+        echo '<p class="saithontinh">Tài khoản này đã bị vô hiệu hóa!</p>';
+    } else {
+        // Code lưu Session cho đăng nhập thành công cũ của bạn giữ nguyên ở đây
+        $_SESSION['MaND']        = $row['MaND'];
+        $_SESSION['TenDangNhap'] = $row['TenDangNhap'];
+        // ...
+        header("Location: MK3LOP.php");
+        exit;
+    }
+}
+    if ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
 
         $_SESSION['MaND']        = $row['MaND'];
         $_SESSION['TenDangNhap'] = $row['TenDangNhap'];

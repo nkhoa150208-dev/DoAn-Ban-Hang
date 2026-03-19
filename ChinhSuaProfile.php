@@ -15,8 +15,12 @@ sqlsrv_query($conn, "UPDATE NguoiDung SET NgayHoatDong = GETDATE() WHERE MaND = 
 // 3. LẤY THÔNG TIN USER
 $res  = sqlsrv_query($conn, "SELECT * FROM dbo.NguoiDung WHERE MaND=?", [$user_id]);
 $user = $res ? sqlsrv_fetch_array($res, SQLSRV_FETCH_ASSOC) : null;
-if (!$user) { session_destroy(); header('Location: DangNhap.php'); exit; }
-
+// NẾU KHÔNG TÌM THẤY TÀI KHOẢN HOẶC TÀI KHOẢN BỊ KHÓA (TrangThai = 0) -> ĐUỔI RA NGOÀI
+if (!$user || $user['TrangThai'] == 0) { 
+    session_destroy(); 
+    echo "<script>alert('Tài khoản của bạn đã bị Admin khóa!'); window.location.href='DangNhap.php';</script>";
+    exit; 
+}
 $success = isset($_GET['s']) ? $_GET['s'] : "";
 $error = isset($_GET['e']) ? $_GET['e'] : "";
 $sMsg = ""; 
@@ -32,6 +36,9 @@ elseif ($success === 'add_address') $sMsg = 'Đã thêm địa chỉ giao hàng 
 elseif ($success === 'delete_address') $sMsg = 'Đã xóa địa chỉ thành công!'; 
 elseif ($success === 'set_default') $sMsg = 'Đã cập nhật địa chỉ mặc định!'; 
 elseif ($success === 'yeu_cau_huy') $sMsg = 'Đã gửi yêu cầu hủy đơn. Vui lòng chờ Admin xác nhận!'; 
+elseif ($success === 'yeu_cau_tra') $sMsg = 'Đã gửi yêu cầu đổi trả hàng thành công!';
+elseif ($success === 'duyet_tra') $sMsg = 'Đã xác nhận hoàn tiền cho đơn hàng!';
+elseif ($success === 'tu_choi_tra') $sMsg = 'Đã từ chối yêu cầu trả hàng!';
 
 $vTxt = ((int)$user['VaiTro'] === 1) ? "Quản trị viên" : "Khách hàng";
 
@@ -121,6 +128,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             sqlsrv_query($conn, "UPDATE DonHang SET TrangThai=N'Chờ xác nhận hủy', LyDoHuy=? WHERE MaDH=? AND MaND=?", [$lyDo, $maDH, $user_id]);
             header('Location: ChinhSuaProfile.php?s=yeu_cau_huy'); exit;
         }
+        if ($action === 'yeu_cau_tra_hang') {
+            $maDH  = (int)($_POST['MaDH'] ?? 0);
+            $lyDo  = trim($_POST['LyDoTra'] ?? '') . ' - Chi tiết: ' . trim($_POST['ChiTietTra'] ?? '');
+            $link  = trim($_POST['LinkVideo'] ?? ''); // Lấy link nếu khách dán link
+
+            // XỬ LÝ UPLOAD FILE (NẾU KHÁCH CHỌN TẢI FILE LÊN)
+            if (isset($_FILES['FileChungMinh']) && $_FILES['FileChungMinh']['error'] === 0) {
+                // Tạo thư mục chứa file trả hàng nếu chưa có
+                $returnPath = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'returns';
+                if (!file_exists($returnPath)) mkdir($returnPath, 0777, true);
+
+                $ext = pathinfo($_FILES['FileChungMinh']['name'], PATHINFO_EXTENSION);
+                $fileName = 'return_dh' . $maDH . '_' . time() . '.' . $ext;
+                $destPath = $returnPath . DIRECTORY_SEPARATOR . $fileName;
+                
+                // Nếu lưu file thành công, ghi đè đường dẫn file vào biến $link
+                if (move_uploaded_file($_FILES['FileChungMinh']['tmp_name'], $destPath)) {
+                    $link = 'uploads/returns/' . $fileName;
+                }
+            }
+
+            // Lưu vào Database
+            sqlsrv_query($conn, "UPDATE DonHang SET TrangThai=N'Yêu cầu đổi trả', LyDoTraHang=?, LinkVideoProof=? WHERE MaDH=? AND MaND=?", [$lyDo, $link, $maDH, $user_id]);
+            header('Location: ChinhSuaProfile.php?s=yeu_cau_tra'); exit;
+        }
     }
 
     // ================= ADMIN (VaiTro == 1) =================
@@ -178,17 +210,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             header('Location: ChinhSuaProfile.php?s=mgg'); exit;
         }
-        if ($action === 'update_order') {
-            sqlsrv_query($conn, "UPDATE DonHang SET TrangThai=? WHERE MaDH=?", [$_POST['TrangThai'], (int)$_POST['MaDH']]);
+if ($action === 'update_order') {
+            $trangThaiMoi = $_POST['TrangThai'];
+            $maDH = (int)$_POST['MaDH'];
+            
+            // LẤY TRẠNG THÁI CŨ CỦA ĐƠN HÀNG TRƯỚC KHI LƯU
+            $q_old = sqlsrv_query($conn, "SELECT TrangThai, MaND, TongTien FROM DonHang WHERE MaDH=?", [$maDH]);
+            $dh_old = sqlsrv_fetch_array($q_old, SQLSRV_FETCH_ASSOC);
+            $trangThaiCu = $dh_old['TrangThai'];
+
+            // Tiến hành cập nhật trạng thái mới
+            sqlsrv_query($conn, "UPDATE DonHang SET TrangThai=? WHERE MaDH=?", [$trangThaiMoi, $maDH]);
+            
+            // CHỈ THƯỞNG XU KHI: Trạng thái mới là "Đã giao" VÀ Trạng thái cũ KHÁC "Đã giao"
+            // (Chống spam bấm Lưu liên tục)
+            if ($trangThaiMoi === 'Đã giao' && $trangThaiCu !== 'Đã giao') {
+                $khach_id = $dh_old['MaND'];
+                $tongTien = (float)$dh_old['TongTien'];
+                $xuThuong = floor($tongTien * 0.05); // Tính 1%
+                
+                if ($xuThuong > 0) {
+                    sqlsrv_query($conn, "UPDATE NguoiDung SET XuTichLuy = ISNULL(XuTichLuy, 0) + ? WHERE MaND=?", [$xuThuong, $khach_id]);
+                }
+            }
             header('Location: ChinhSuaProfile.php?s=donhang'); exit;
-        }
-        if ($action === 'duyet_huy') {
+        }        if ($action === 'duyet_huy') {
             sqlsrv_query($conn, "UPDATE DonHang SET TrangThai=N'Đã hủy' WHERE MaDH=?", [(int)$_POST['MaDH']]);
             header('Location: ChinhSuaProfile.php?s=donhang'); exit;
         }
         if ($action === 'tu_choi_huy') {
             sqlsrv_query($conn, "UPDATE DonHang SET TrangThai=N'Chờ xử lý', LyDoHuy=NULL WHERE MaDH=?", [(int)$_POST['MaDH']]);
             header('Location: ChinhSuaProfile.php?s=donhang'); exit;
+        }
+        if ($action === 'duyet_tra_hang') {
+            sqlsrv_query($conn, "UPDATE DonHang SET TrangThai=N'Đã hoàn tiền' WHERE MaDH=?", [(int)$_POST['MaDH']]);
+            header('Location: ChinhSuaProfile.php?s=duyet_tra'); exit;
+        }
+        if ($action === 'tu_choi_tra_hang') {
+            sqlsrv_query($conn, "UPDATE DonHang SET TrangThai=N'Từ chối đổi trả' WHERE MaDH=?", [(int)$_POST['MaDH']]);
+            header('Location: ChinhSuaProfile.php?s=tu_choi_tra'); exit;
         }
         if ($action === 'toggle_user') {
             sqlsrv_query($conn, "UPDATE NguoiDung SET TrangThai = ? WHERE MaND = ?", [(int)$_POST['TrangThaiMoi'], (int)$_POST['MaND']]);
@@ -212,8 +272,7 @@ if ($user['VaiTro'] == 0) {
     $stmt_yt = sqlsrv_query($conn, "SELECT yt.MaYT, sp.* FROM YeuThich yt JOIN SanPham sp ON yt.MaSP = sp.MaSP WHERE yt.MaND = ? ORDER BY yt.NgayThem DESC", [$user_id]);
     // DS Đơn hàng
     $dsDH = sqlsrv_query($conn, "SELECT * FROM DonHang WHERE MaND=? ORDER BY NgayDat DESC", [$user_id]);
-    $ttColor = ['Chờ xử lý'=>'#f59e0b', 'Đang giao'=>'#6366f1', 'Đã giao'=>'#22c55e', 'Đã hủy'=>'#ef4444', 'Chờ xác nhận hủy'=>'#f97316'];
-    
+$ttColor = ['Chờ xử lý'=>'#f59e0b', 'Đang giao'=>'#6366f1', 'Đã giao'=>'#22c55e', 'Đã hủy'=>'#ef4444', 'Chờ xác nhận hủy'=>'#f97316', 'Yêu cầu đổi trả'=>'#a855f7', 'Đã hoàn tiền'=>'#0ea5e9', 'Từ chối đổi trả'=>'#ef4444'];    
     // Nếu có query xem chi tiết đơn
     $chiTiet = []; $maDHChon = null;
     if (isset($_GET['id_don'])) {
@@ -417,9 +476,22 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
         <div class="st">Thông tin cá nhân</div>
         <div class="ig">
           <div class="ii"><label>Họ và tên</label><div class="iv"><?= htmlspecialchars($user['HoTen']) ?></div></div>
-          <div class="ii"><label>Tên đăng nhập</label><div class="iv"><?= htmlspecialchars($user['TenDangNhap']) ?></div></div>
-          <div class="ii"><label>Email</label><div class="iv"><?= htmlspecialchars($user['Email'] ?? '—') ?></div></div>
-          <div class="ii"><label>Số điện thoại</label><div class="iv"><?= htmlspecialchars($user['SoDienThoai'] ?? '—') ?></div></div>
+<div class="ii"><label>Tên đăng nhập</label><div class="iv"><?= htmlspecialchars($user['TenDangNhap']) ?></div></div>
+          
+          <?php if ($user['VaiTro'] == 0): ?>
+          <div class="ii" style="grid-column:1/-1;">
+            <div style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.4); padding:15px; border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <label style="color:#fbbf24; font-size:12px; font-weight:bold;">SỐ DƯ XU TÍCH LŨY</label>
+                    <div style="color:#fbbf24; font-family:'Orbitron'; font-size:24px; font-weight:bold; margin-top:5px;">🪙 <?= number_format($user['XuTichLuy'] ?? 0, 0, ',', '.') ?> Xu</div>
+                </div>
+                <div style="text-align:right; font-size:12px; color:var(--muted);">
+                    (1 Xu = 1 VNĐ)<br>Được giảm trực tiếp khi mua hàng
+                </div>
+            </div>
+          </div>
+          <?php endif; ?>
+          <div class="ii"><label>Email</label><div class="iv"><?= htmlspecialchars($user['Email'] ?? '—') ?></div></div>          <div class="ii"><label>Số điện thoại</label><div class="iv"><?= htmlspecialchars($user['SoDienThoai'] ?? '—') ?></div></div>
           <div class="ii" style="grid-column:1/-1">
             <label>Địa chỉ</label>
             <div class="iv"><?= htmlspecialchars($user['DiaChi'] ?? '—') ?></div>
@@ -453,8 +525,10 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
                 $c = $ttColor[$dh['TrangThai']] ?? '#888899';
                 $isPendingCancel = ($dh['TrangThai'] === 'Chờ xác nhận hủy');
                 $canCancel = ($dh['TrangThai'] === 'Chờ xử lý');
+                $canReturn = ($dh['TrangThai'] === 'Đã giao');
               ?>
-                <div class="order-item <?= $isPendingCancel ? 'pending-cancel' : '' ?>">
+             
+               <div class="order-item <?= $isPendingCancel ? 'pending-cancel' : '' ?>">
                   <div>
                     <div class="order-id">Đơn #<?= $dh['MaDH'] ?></div>
                     <div class="order-date"><?= ($dh['NgayDat'] instanceof DateTime) ? $dh['NgayDat']->format('d/m/Y H:i') : '' ?></div>
@@ -464,10 +538,16 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
                   </div>
                   <div class="badge-status" style="background:<?= $c ?>22;color:<?= $c ?>;border:1px solid <?= $c ?>55"><?= htmlspecialchars($dh['TrangThai']) ?></div>
                   <div class="order-total"><?= number_format($dh['TongTien'],0,',','.') ?>đ</div>
+                  
                   <div style="display:flex;gap:8px;align-items:center;">
                     <?php if ($canCancel): ?>
                       <button class="btn-huy" onclick="openHuyModal(<?= $dh['MaDH'] ?>)">&#x274C; Yêu cầu hủy</button>
                     <?php endif; ?>
+                    
+                    <?php if ($canReturn): ?>
+                      <button class="btn-huy" style="border-color:#a855f7; color:#a855f7;" onclick="openTraHangModal(<?= $dh['MaDH'] ?>)">🔄 Yêu cầu đổi trả</button>
+                    <?php endif; ?>
+
                     <a href="?id_don=<?= $dh['MaDH'] ?>" class="btn-det">Chi tiết</a>
                   </div>
                 </div>
@@ -601,6 +681,43 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
             <div style="display:flex; gap:10px; margin-top:15px; justify-content:flex-end;">
               <button type="button" class="btn bg2" onclick="document.getElementById('modalHuyDon').style.display='none'">Hủy bỏ</button>
               <button type="submit" class="btn" style="background:#f97316; color:#fff;">Gửi yêu cầu hủy</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div id="modalTraHang" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(5px);">
+        <div style="background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:28px; width:90%; max-width:500px;">
+          <div style="font-size:16px; font-weight:700; margin-bottom:6px; color:var(--purple2);">🔄 Yêu cầu Đổi/Trả hàng & Hoàn tiền</div>
+          <div style="font-size:13px; color:var(--muted); margin-bottom:18px;">Đơn #<span id="txtModalTraMaDH"></span></div>
+          <form method="post" enctype="multipart/form-data">
+            <input type="hidden" name="action" value="yeu_cau_tra_hang">
+            <input type="hidden" name="MaDH" id="inpModalTraMaDH">
+            <div class="fi" style="margin-bottom:10px;">
+                <label>Lý do chính *</label>
+                <select name="LyDoTra" required style="width:100%; background:var(--panel2); border:1px solid var(--border); border-radius:8px; color:var(--tx); padding:10px; margin-top:5px;">
+                    <option value="Sản phẩm bị lỗi kỹ thuật">Sản phẩm bị lỗi kỹ thuật</option>
+                    <option value="Giao sai sản phẩm / màu sắc">Giao sai sản phẩm / màu sắc</option>
+                    <option value="Thiếu phụ kiện / Quà tặng">Thiếu phụ kiện / Quà tặng</option>
+                    <option value="Bể vỡ do vận chuyển">Bể vỡ do vận chuyển</option>
+                </select>
+            </div>
+            <div class="fi" style="margin-bottom:10px;">
+                <label>Mô tả chi tiết tình trạng *</label>
+                <textarea name="ChiTietTra" placeholder="Mô tả rõ sản phẩm bị lỗi như thế nào..." required style="width:100%; background:var(--panel2); border:1px solid var(--border); border-radius:8px; color:var(--tx); padding:10px; min-height:80px; outline:none; resize:vertical; margin-top:5px;"></textarea>
+            </div>
+            
+            <div class="fi" style="margin-bottom:20px; background:rgba(0,229,255,0.05); padding:15px; border-radius:10px; border:1px dashed var(--cyan);">
+                <label>Tải Video / Ảnh chứng minh lên (Ưu tiên) *</label>
+                <input type="file" name="FileChungMinh" accept="video/*, image/*" style="width:100%; background:var(--panel2); border:1px solid var(--border); border-radius:8px; color:var(--tx); padding:7px; outline:none; margin-top:5px;">
+                
+                <div style="text-align:center; font-size:12px; color:var(--muted); margin:10px 0; font-weight:bold;">-- HOẶC CHÈN LINK --</div>
+                
+                <input type="url" name="LinkVideo" placeholder="Dán link Drive, Youtube nếu file quá nặng..." style="width:100%; background:var(--panel2); border:1px solid var(--border); border-radius:8px; color:var(--tx); padding:10px; outline:none;">
+            </div>
+
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+              <button type="button" class="btn bg2" onclick="document.getElementById('modalTraHang').style.display='none'">Hủy bỏ</button>
+              <button type="submit" class="btn" style="background:var(--purple); color:#fff;">Gửi yêu cầu đổi trả</button>
             </div>
           </form>
         </div>
@@ -739,12 +856,12 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
         </div>
       </div>
 
-      <div id="t_dh" class="tp">
+     <div id="t_dh" class="tp">
         <div class="st">📦 Quản lý đơn hàng</div>
         <?php 
           $cntHuy = sqlsrv_query($conn, "SELECT COUNT(*) as cnt FROM DonHang WHERE TrangThai=N'Chờ xác nhận hủy'");
           $soChoHuy = $cntHuy ? (int)(sqlsrv_fetch_array($cntHuy, SQLSRV_FETCH_ASSOC)['cnt'] ?? 0) : 0;
-          $ttColor = ['Chờ xử lý'=>'#f59e0b', 'Đang giao'=>'#3b82f6', 'Đã giao'=>'#22c55e', 'Đã hủy'=>'#ef4444', 'Chờ xác nhận hủy'=>'#f97316'];
+          $ttColor = ['Chờ xử lý'=>'#f59e0b', 'Đang giao'=>'#3b82f6', 'Đã giao'=>'#22c55e', 'Đã hủy'=>'#ef4444', 'Chờ xác nhận hủy'=>'#f97316', 'Yêu cầu đổi trả'=>'#a855f7', 'Đã hoàn tiền'=>'#0ea5e9', 'Từ chối đổi trả'=>'#ef4444'];
         ?>
         <?php if ($soChoHuy > 0): ?>
         <div style="background:rgba(249,115,22,.1); border:1px solid rgba(249,115,22,.4); border-radius:10px; padding:14px 18px; margin-bottom:20px; font-size:13px; font-weight:600; color:#fb923c;">
@@ -760,8 +877,9 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
                     while($dh = sqlsrv_fetch_array($q_dh, SQLSRV_FETCH_ASSOC)):
                         $c = $ttColor[$dh['TrangThai']] ?? '#888899';
                         $isChoHuy = ($dh['TrangThai'] === 'Chờ xác nhận hủy');
+                        $isTraHang = ($dh['TrangThai'] === 'Yêu cầu đổi trả');
                     ?>
-                    <tr style="<?= $isChoHuy ? 'background:rgba(249,115,22,.05); border-left:3px solid var(--orange);' : '' ?>">
+                    <tr style="<?= $isChoHuy ? 'background:rgba(249,115,22,.05); border-left:3px solid var(--orange);' : ($isTraHang ? 'background:rgba(168,85,247,.05); border-left:3px solid var(--purple2);' : '') ?>">
                         <td style="font-family:'Orbitron'; padding:10px; color:var(--cyan); font-weight:bold;">#<?= $dh['MaDH'] ?><br><span style="font-size:10px;color:var(--muted);font-family:'Exo 2'"><?= $dh['NgayDat']->format('d/m/Y H:i') ?></span></td>
                         <td style="padding:10px;"><?= htmlspecialchars($dh['HoTen'] ?? '') ?><br><span style="font-size:11px;color:var(--muted);">@<?= htmlspecialchars($dh['TenDangNhap'] ?? '') ?></span><br><span style="font-size:11px;color:var(--muted);">Ghi chú: <?= htmlspecialchars($dh['GhiChu'] ?? 'Không') ?></span></td>
                         <td style="color:var(--purple2); font-weight:bold; padding:10px;"><?= number_format($dh['TongTien'] ?? 0, 0, ',', '.') ?>đ</td>
@@ -770,9 +888,20 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
                             <?php if ($isChoHuy && !empty($dh['LyDoHuy'])): ?>
                                 <div class="ly-do-box">&#x1F4AC; "<?= htmlspecialchars($dh['LyDoHuy']) ?>"</div>
                             <?php endif; ?>
+                            <?php if ($isTraHang && !empty($dh['LyDoTraHang'])): ?>
+                                <div class="ly-do-box" style="color:var(--purple2); border-color:rgba(168,85,247,.3); background:rgba(168,85,247,.1);">&#x1F4AC; Khách có gửi Video</div>
+                            <?php endif; ?>
                         </td>
                         <td style="text-align:right; padding:10px;">
-                            <?php if ($isChoHuy): ?>
+                            <?php if ($isTraHang): ?>
+                                <button type="button" class="btn bg2" style="padding:5px 10px; font-size:11px; color:var(--purple2); border-color:var(--purple2);" 
+                                    onclick="openChiTietTraHang(this)" 
+                                    data-id="<?= $dh['MaDH'] ?>" 
+                                    data-lydo="<?= htmlspecialchars($dh['LyDoTraHang'] ?? '') ?>" 
+                                    data-link="<?= htmlspecialchars($dh['LinkVideoProof'] ?? '') ?>">
+                                    🔍 Xét duyệt
+                                </button>
+                            <?php elseif ($isChoHuy): ?>
                                 <form method="post" style="display:inline" onsubmit="return confirm('Đồng ý hủy đơn #<?= $dh['MaDH'] ?>?')"><input type="hidden" name="action" value="duyet_huy"><input type="hidden" name="MaDH" value="<?= $dh['MaDH'] ?>"><button type="submit" class="btn-no-huy">&#x2714; Hủy Đơn</button></form>
                                 <form method="post" style="display:inline"><input type="hidden" name="action" value="tu_choi_huy"><input type="hidden" name="MaDH" value="<?= $dh['MaDH'] ?>"><button type="submit" class="btn-ok-huy">&#x2715; Từ chối</button></form>
                             <?php else: ?>
@@ -792,6 +921,35 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
                 </tbody>
             </table>
         </div>
+      </div>
+
+      <div id="modalChiTietTraHang" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(5px);">
+          <div style="background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:28px; width:90%; max-width:500px; text-align: left;">
+              <div style="font-size:16px; font-weight:700; margin-bottom:15px; color:var(--purple2);">🔍 Chi Tiết Yêu Cầu Đổi Trả</div>
+              <div style="margin-bottom:10px; font-size:14px;"><strong>Mã đơn hàng:</strong> <span style="color:var(--cyan); font-family:'Orbitron'; font-weight:bold;">#<span id="adTraMaDH"></span></span></div>
+              
+              <div style="margin-bottom:5px; font-size:14px;"><strong>Lý do & Mô tả:</strong></div>
+              <div id="adTraLyDo" style="background:var(--panel2); padding:12px; border-radius:8px; color:var(--tx); font-size:13px; margin-bottom:15px; line-height:1.5; border: 1px solid rgba(168,85,247,0.3);"></div>
+
+              <div style="margin-bottom:5px; font-size:14px;"><strong>Video / Ảnh bằng chứng từ Khách:</strong></div>
+              <a id="adTraLink" href="#" target="_blank" style="display:inline-flex; align-items:center; gap: 8px; background:rgba(0,229,255,0.1); color:var(--cyan); padding:12px 20px; border-radius:8px; text-decoration:none; font-size:14px; font-weight:bold; margin-bottom:25px; border:1px solid rgba(0,229,255,0.3); transition:0.3s;">
+                  ▶ Click để mở Link Video xem xét
+              </a>
+
+              <div style="display:flex; gap:10px; justify-content:flex-end; border-top:1px solid var(--border); padding-top:20px;">
+                  <form method="post" style="margin:0;">
+                      <input type="hidden" name="action" value="tu_choi_tra_hang">
+                      <input type="hidden" name="MaDH" id="adInpTuChoi">
+                      <button type="submit" class="btn" style="background:rgba(239,68,68,.1); color:#f87171; border:1px solid rgba(239,68,68,.3);" onclick="return confirm('Xác nhận TỪ CHỐI yêu cầu trả hàng này?')">✖ Từ chối</button>
+                  </form>
+                  <form method="post" style="margin:0;">
+                      <input type="hidden" name="action" value="duyet_tra_hang">
+                      <input type="hidden" name="MaDH" id="adInpDuyet">
+                      <button type="submit" class="btn bp" style="background:linear-gradient(135deg, var(--purple), var(--purple2)); border:none;" onclick="return confirm('Xác nhận đã nhận lại hàng và HOÀN TIỀN cho khách?')">✔ Duyệt & Hoàn Tiền</button>
+                  </form>
+                  <button type="button" class="btn bg2" onclick="document.getElementById('modalChiTietTraHang').style.display='none'">Đóng</button>
+              </div>
+          </div>
       </div>
 
      <div id="t_nd" class="tp">
@@ -1124,6 +1282,27 @@ window.addEventListener('DOMContentLoaded', () => {
 <?php if($success==='mgg'): ?> window.onload = () => swn('mgg'); <?php endif; ?>
 <?php if($success==='donhang'): ?> window.onload = () => swn('donhang'); <?php endif; ?>
 <?php if($success==='nguoidung'): ?> window.onload = () => swn('nguoidung'); <?php endif; ?>
+
+function openTraHangModal(id) {
+    document.getElementById('txtModalTraMaDH').textContent = id;
+    document.getElementById('inpModalTraMaDH').value = id;
+    document.getElementById('modalTraHang').style.display = 'flex';
+}
+
+function openChiTietTraHang(btn) {
+    let id = btn.getAttribute('data-id');
+    let lydo = btn.getAttribute('data-lydo');
+    let link = btn.getAttribute('data-link');
+
+    document.getElementById('adTraMaDH').textContent = id;
+    document.getElementById('adTraLyDo').textContent = lydo;
+    document.getElementById('adTraLink').href = link;
+    
+    document.getElementById('adInpTuChoi').value = id;
+    document.getElementById('adInpDuyet').value = id;
+
+    document.getElementById('modalChiTietTraHang').style.display = 'flex';
+}
 </script>
 </body>
 </html>

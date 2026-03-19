@@ -356,3 +356,9 @@ GO
 --update mã hìn
 ALTER TABLE NguoiDung ALTER COLUMN Avatar VARCHAR(MAX);
 GO
+--đổi trả
+USE QLBanHang;
+GO
+ALTER TABLE DonHang ADD LyDoTraHang NVARCHAR(MAX) NULL;
+ALTER TABLE DonHang ADD LinkVideoProof VARCHAR(MAX) NULL;
+GO
