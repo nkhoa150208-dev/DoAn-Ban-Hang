@@ -169,8 +169,8 @@ $activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'baohanh';
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
                 <div style="background: var(--navy); padding: 20px; border-radius: 10px; border: 1px dashed var(--cyan);">
                     <h3 style="margin-top:0; color: var(--cyan);">📍 Trụ Sở Chính</h3>
-                    <p>123 Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh.</p>
-                    <a href="https://www.google.com/maps/search/123+Nguyễn+Huệ,+Quận+1,+TP+HCM" target="_blank" class="btn-home" style="margin-top: 5px; display:inline-block; font-size: 12px;">🗺️ Xem trên Google Maps</a>
+                    <p>390 Đ. Hoàng Văn Thụ, Phường 4, Tân Bình, Hồ Chí Minh, Việt Nam</p>
+                    <a href="https://maps.app.goo.gl/whAaJBGksxaRP3xDA" target="_blank" class="btn-home" style="margin-top: 5px; display:inline-block; font-size: 12px;">🗺️ Xem trên Google Maps</a>
                     
                     <h3 style="color: var(--cyan);">📞 Hotline Hỗ Trợ</h3>
                     <p style="font-family: 'Orbitron'; font-size: 18px; font-weight: bold; color: #fff;">0585.246.973</p>

@@ -362,3 +362,15 @@ GO
 ALTER TABLE DonHang ADD LyDoTraHang NVARCHAR(MAX) NULL;
 ALTER TABLE DonHang ADD LinkVideoProof VARCHAR(MAX) NULL;
 GO
+--thêm xu
+USE QLBanHang;
+GO
+ALTER TABLE NguoiDung ADD XuTichLuy INT DEFAULT 0;
+
+--thêm xu
+--thêm xu
+--thêm xu
+--thêm xu
+--thêm xu
+--thêm xu
+GO

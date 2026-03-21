@@ -131,25 +131,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($action === 'yeu_cau_tra_hang') {
             $maDH  = (int)($_POST['MaDH'] ?? 0);
             $lyDo  = trim($_POST['LyDoTra'] ?? '') . ' - Chi tiết: ' . trim($_POST['ChiTietTra'] ?? '');
-            $link  = trim($_POST['LinkVideo'] ?? ''); // Lấy link nếu khách dán link
+            $link  = trim($_POST['LinkVideo'] ?? ''); 
 
-            // XỬ LÝ UPLOAD FILE (NẾU KHÁCH CHỌN TẢI FILE LÊN)
             if (isset($_FILES['FileChungMinh']) && $_FILES['FileChungMinh']['error'] === 0) {
-                // Tạo thư mục chứa file trả hàng nếu chưa có
                 $returnPath = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'returns';
                 if (!file_exists($returnPath)) mkdir($returnPath, 0777, true);
-
                 $ext = pathinfo($_FILES['FileChungMinh']['name'], PATHINFO_EXTENSION);
                 $fileName = 'return_dh' . $maDH . '_' . time() . '.' . $ext;
                 $destPath = $returnPath . DIRECTORY_SEPARATOR . $fileName;
                 
-                // Nếu lưu file thành công, ghi đè đường dẫn file vào biến $link
                 if (move_uploaded_file($_FILES['FileChungMinh']['tmp_name'], $destPath)) {
                     $link = 'uploads/returns/' . $fileName;
                 }
             }
-
-            // Lưu vào Database
             sqlsrv_query($conn, "UPDATE DonHang SET TrangThai=N'Yêu cầu đổi trả', LyDoTraHang=?, LinkVideoProof=? WHERE MaDH=? AND MaND=?", [$lyDo, $link, $maDH, $user_id]);
             header('Location: ChinhSuaProfile.php?s=yeu_cau_tra'); exit;
         }
@@ -168,7 +162,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } exit;
         }
         if ($action === 'quick_update_stock') {
-            echo (sqlsrv_query($conn, "UPDATE SanPham SET SoLuongTon = ? WHERE MaSP = ?", [(int)$_POST['qty'], (int)$_POST['id']])) ? "OK" : "Error"; exit;
+            // Cộng dồn hàng mới vào kho
+            echo (sqlsrv_query($conn, "UPDATE SanPham SET SoLuongTon = SoLuongTon + ? WHERE MaSP = ?", [(int)$_POST['qty'], (int)$_POST['id']])) ? "OK" : "Error"; exit;
         }
         if ($action === 'add_product') {
             $ten = trim($_POST['TenSP'] ?? ''); $madm = (int)($_POST['MaDM'] ?? 1); $gia = (float)($_POST['Gia'] ?? 0);
@@ -192,12 +187,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         if ($action === 'edit_product') {
             $idEdit = (int)($_POST['MaSP']??0); $tenSP = trim($_POST['TenSP'] ?? ''); $gia = (float)($_POST['Gia'] ?? 0);
-            $slTon = (int)($_POST['SoLuongTon'] ?? 0); $maDM = (int)($_POST['MaDM'] ?? 1); $moTa = trim($_POST['MoTa'] ?? '');
+            $maDM = (int)($_POST['MaDM'] ?? 1); $moTa = trim($_POST['MoTa'] ?? '');
             $cpu = trim($_POST['CPU'] ?? ''); $ram = trim($_POST['RAM'] ?? ''); $oCung = trim($_POST['O_Cung'] ?? '');
             $manHinh = trim($_POST['ManHinh'] ?? ''); $vga = trim($_POST['VGA'] ?? ''); $camera = trim($_POST['Camera'] ?? '');
             $pin = trim($_POST['Pin'] ?? ''); $ketnoi = trim($_POST['KetNoi'] ?? ''); $tuongthich = trim($_POST['TuongThich'] ?? '');
             $baoHanh = trim($_POST['BaoHanh'] ?? '');
-            sqlsrv_query($conn, "UPDATE SanPham SET TenSP=?, Gia=?, SoLuongTon=?, MaDM=?, CPU=?, RAM=?, O_Cung=?, ManHinh=?, VGA=?, Camera=?, Pin=?, KetNoi=?, TuongThich=?, BaoHanh=?, MoTa=? WHERE MaSP=?", [$tenSP, $gia, $slTon, $maDM, $cpu, $ram, $oCung, $manHinh, $vga, $camera, $pin, $ketnoi, $tuongthich, $baoHanh, $moTa, $idEdit]);
+            
+            $sql_upd = "UPDATE SanPham SET TenSP=?, Gia=?, MaDM=?, CPU=?, RAM=?, O_Cung=?, ManHinh=?, VGA=?, Camera=?, Pin=?, KetNoi=?, TuongThich=?, BaoHanh=?, MoTa=? WHERE MaSP=?";
+            $params_upd = [$tenSP, $gia, $maDM, $cpu, $ram, $oCung, $manHinh, $vga, $camera, $pin, $ketnoi, $tuongthich, $baoHanh, $moTa, $idEdit];
+
+            if (isset($_FILES['HinhAnhEdit']) && $_FILES['HinhAnhEdit']['error'] === 0) {
+                $ext = pathinfo($_FILES['HinhAnhEdit']['name'], PATHINFO_EXTENSION);
+                $dbPath = 'uploads/products/prod_' . $idEdit . '_' . time() . '.' . $ext;
+                if (move_uploaded_file($_FILES['HinhAnhEdit']['tmp_name'], __DIR__ . DIRECTORY_SEPARATOR . $dbPath)) {
+                    $sql_upd = "UPDATE SanPham SET TenSP=?, Gia=?, MaDM=?, CPU=?, RAM=?, O_Cung=?, ManHinh=?, VGA=?, Camera=?, Pin=?, KetNoi=?, TuongThich=?, BaoHanh=?, MoTa=?, HinhAnh=? WHERE MaSP=?";
+                    $params_upd = [$tenSP, $gia, $maDM, $cpu, $ram, $oCung, $manHinh, $vga, $camera, $pin, $ketnoi, $tuongthich, $baoHanh, $moTa, $dbPath, $idEdit];
+                }
+            }
+            
+            sqlsrv_query($conn, $sql_upd, $params_upd);
             header('Location: ChinhSuaProfile.php?s=product'); exit;
         }
         if ($action === 'add_mgg') {
@@ -210,31 +218,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             header('Location: ChinhSuaProfile.php?s=mgg'); exit;
         }
-if ($action === 'update_order') {
+        if ($action === 'update_order') {
             $trangThaiMoi = $_POST['TrangThai'];
             $maDH = (int)$_POST['MaDH'];
             
-            // LẤY TRẠNG THÁI CŨ CỦA ĐƠN HÀNG TRƯỚC KHI LƯU
             $q_old = sqlsrv_query($conn, "SELECT TrangThai, MaND, TongTien FROM DonHang WHERE MaDH=?", [$maDH]);
             $dh_old = sqlsrv_fetch_array($q_old, SQLSRV_FETCH_ASSOC);
             $trangThaiCu = $dh_old['TrangThai'];
 
-            // Tiến hành cập nhật trạng thái mới
             sqlsrv_query($conn, "UPDATE DonHang SET TrangThai=? WHERE MaDH=?", [$trangThaiMoi, $maDH]);
             
-            // CHỈ THƯỞNG XU KHI: Trạng thái mới là "Đã giao" VÀ Trạng thái cũ KHÁC "Đã giao"
-            // (Chống spam bấm Lưu liên tục)
             if ($trangThaiMoi === 'Đã giao' && $trangThaiCu !== 'Đã giao') {
                 $khach_id = $dh_old['MaND'];
                 $tongTien = (float)$dh_old['TongTien'];
-                $xuThuong = floor($tongTien * 0.05); // Tính 1%
+                $xuThuong = floor($tongTien * 0.05); // Tính 5%
                 
                 if ($xuThuong > 0) {
                     sqlsrv_query($conn, "UPDATE NguoiDung SET XuTichLuy = ISNULL(XuTichLuy, 0) + ? WHERE MaND=?", [$xuThuong, $khach_id]);
                 }
             }
             header('Location: ChinhSuaProfile.php?s=donhang'); exit;
-        }        if ($action === 'duyet_huy') {
+        }        
+        if ($action === 'duyet_huy') {
             sqlsrv_query($conn, "UPDATE DonHang SET TrangThai=N'Đã hủy' WHERE MaDH=?", [(int)$_POST['MaDH']]);
             header('Location: ChinhSuaProfile.php?s=donhang'); exit;
         }
@@ -266,14 +271,10 @@ if ($action === 'update_order') {
 
 // LẤY DỮ LIỆU NẾU LÀ KHÁCH HÀNG (Phục vụ cho các Tab)
 if ($user['VaiTro'] == 0) {
-    // DS Địa chỉ
     $stmt_diachi = sqlsrv_query($conn, "SELECT * FROM SoDiaChi WHERE MaND = ? ORDER BY MacDinh DESC, MaDC DESC", [$user_id]);
-    // DS Yêu thích
     $stmt_yt = sqlsrv_query($conn, "SELECT yt.MaYT, sp.* FROM YeuThich yt JOIN SanPham sp ON yt.MaSP = sp.MaSP WHERE yt.MaND = ? ORDER BY yt.NgayThem DESC", [$user_id]);
-    // DS Đơn hàng
     $dsDH = sqlsrv_query($conn, "SELECT * FROM DonHang WHERE MaND=? ORDER BY NgayDat DESC", [$user_id]);
-$ttColor = ['Chờ xử lý'=>'#f59e0b', 'Đang giao'=>'#6366f1', 'Đã giao'=>'#22c55e', 'Đã hủy'=>'#ef4444', 'Chờ xác nhận hủy'=>'#f97316', 'Yêu cầu đổi trả'=>'#a855f7', 'Đã hoàn tiền'=>'#0ea5e9', 'Từ chối đổi trả'=>'#ef4444'];    
-    // Nếu có query xem chi tiết đơn
+    $ttColor = ['Chờ xử lý'=>'#f59e0b', 'Đang giao'=>'#6366f1', 'Đã giao'=>'#22c55e', 'Đã hủy'=>'#ef4444', 'Chờ xác nhận hủy'=>'#f97316', 'Yêu cầu đổi trả'=>'#a855f7', 'Đã hoàn tiền'=>'#0ea5e9', 'Từ chối đổi trả'=>'#ef4444'];    
     $chiTiet = []; $maDHChon = null;
     if (isset($_GET['id_don'])) {
         $maDHChon = (int)$_GET['id_don'];
@@ -292,6 +293,7 @@ $avSrc = (!empty($user['Avatar']) && file_exists(__DIR__ . '/' . $user['Avatar']
 <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;500;600;700;900&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
 <title>Tài Khoản / Quản Trị</title>
 <style>
+
 :root { --navy:#050d1a; --navy2:#071223; --panel:#0d1f38; --panel2:#0f2444; --panel3:#0d2240; --cyan:#00e5ff; --cyan2:#00b8d4; --purple:#7c3aed; --purple2:#a855f7; --green:#22c55e; --tx:#e2eaf5; --muted:#7a92b0; --border:rgba(0,229,255,0.12); --glow-cyan:0 0 20px rgba(0,229,255,0.4); --glow-purple:0 0 20px rgba(168,85,247,0.4); --orange:#f97316; --r: 14px; }
 *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
 a.back { border: 2px solid #242342; border-radius: 8px; width: 100px; height: 30px; display: flex; justify-content: center; text-decoration: none; color: #bbbbbb; align-items: center; }
@@ -752,7 +754,7 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
         <div class="st">Quản lý tồn kho & Hình ảnh</div>
         <div style="overflow-x: auto;">
           <table class="stock-table" id="table-tuk">
-            <thead><tr style="color: var(--cyan);"><th style="padding: 10px;">ID</th><th style="padding: 10px;">Ảnh</th><th style="padding: 10px;">Sản phẩm</th><th style="padding: 10px;">Số lượng</th><th style="text-align: right; padding: 10px;">Lưu</th></tr></thead>
+            <thead><tr style="color: var(--cyan);"><th style="padding: 10px;">ID</th><th style="padding: 10px;">Ảnh</th><th style="padding: 10px;">Sản phẩm</th><th style="padding: 10px;">Nhập thêm số lượng</th><th style="text-align: right; padding: 10px;">Lưu</th></tr></thead>
             <tbody>
               <?php
               $q_list = sqlsrv_query($conn, "SELECT MaSP, TenSP, SoLuongTon, HinhAnh FROM SanPham ORDER BY MaSP DESC");
@@ -760,10 +762,13 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
               ?>
               <tr>
                 <td style="color: var(--muted);">#<?= $row['MaSP'] ?></td>
-                <td><div class="prod-img-wrapper" onclick="document.getElementById('file-<?= $row['MaSP'] ?>').click()"><input type="file" id="file-<?= $row['MaSP'] ?>" onchange="updateProductImage(<?= $row['MaSP'] ?>)" style="display:none;" accept="image/*"><img src="<?= $row['HinhAnh'] ?>" id="img-<?= $row['MaSP'] ?>" onerror="this.src='https://via.placeholder.com/50x50?text=Img'"></div></td>
+                <td><img src="<?= $row['HinhAnh'] ?>" style="width:45px; height:45px; object-fit:contain; background:var(--panel2); border-radius:6px; padding:2px;" onerror="this.src='https://via.placeholder.com/50x50?text=Img'"></td>
                 <td style="font-weight: 600;"><?= htmlspecialchars($row['TenSP']) ?></td>
-                <td><input type="number" id="stock-<?= $row['MaSP'] ?>" value="<?= $row['SoLuongTon'] ?>" style="width:70px; background:var(--panel2); border:1.5px solid var(--border); color:var(--cyan); padding:5px; border-radius:4px;"></td>
-                <td style="text-align: right;"><button onclick="saveStock(<?= $row['MaSP'] ?>)" class="btn bp" style="padding: 6px 12px;">LƯU</button></td>
+                <td>
+                    <div style="font-size:11px; color:var(--muted); margin-bottom:4px;">Trong kho đang có: <strong style="color:var(--green); font-size:13px;"><?= $row['SoLuongTon'] ?></strong></div>
+                    <input type="number" id="stock-<?= $row['MaSP'] ?>" value="0" min="0" placeholder="+ Thêm" style="width:90px; background:var(--panel2); border:1.5px solid var(--border); color:var(--cyan); padding:5px 8px; border-radius:4px; font-weight:bold;">
+                </td>
+                <td style="text-align: right;"><button onclick="saveStock(<?= $row['MaSP'] ?>)" class="btn bp" style="padding: 6px 12px; background:var(--cyan); color:var(--navy);">➕ CỘNG VÀO KHO</button></td>
               </tr>
               <?php endwhile; ?>
             </tbody>
@@ -775,17 +780,23 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
         <div class="st">Chỉnh sửa / Xóa sản phẩm</div>
         <div style="overflow-x:auto">
           <table class="stock-table" id="table-tsp">
-            <thead><tr style="color:var(--cyan);"><th style="padding:10px;">ID</th><th style="padding:10px;">Tên SP</th><th style="padding:10px;">Giá</th><th style="padding:10px;">Tồn</th><th style="padding:10px;text-align:right;">Thao tác</th></tr></thead>
+            <thead><tr style="color:var(--cyan);"><th style="padding:10px;">ID</th><th style="padding:10px;">Sản phẩm</th><th style="padding:10px;">Giá</th><th style="padding:10px;">Tồn kho</th><th style="padding:10px;text-align:right;">Thao tác</th></tr></thead>
             <tbody>
               <?php
-              $q2 = sqlsrv_query($conn, "SELECT MaSP,TenSP,Gia,SoLuongTon FROM SanPham ORDER BY MaSP DESC");
+              // Phải select thêm HinhAnh để show ra
+              $q2 = sqlsrv_query($conn, "SELECT MaSP,TenSP,Gia,SoLuongTon,HinhAnh FROM SanPham ORDER BY MaSP DESC");
               while($r2 = sqlsrv_fetch_array($q2, SQLSRV_FETCH_ASSOC)):
               ?>
               <tr>
                 <td style="color:var(--muted);padding:10px">#<?= $r2['MaSP'] ?></td>
-                <td style="font-weight:600;padding:10px"><?= htmlspecialchars($r2['TenSP']) ?></td>
-                <td style="color:var(--cyan);padding:10px"><?= number_format($r2['Gia'],0,',','.') ?>đ</td>
-                <td style="padding:10px"><?= $r2['SoLuongTon'] ?></td>
+                <td style="padding:10px">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <img src="<?= $r2['HinhAnh'] ?>" style="width:40px; height:40px; object-fit:contain; background:var(--panel2); border-radius:6px; padding:2px;" onerror="this.src='https://via.placeholder.com/40x40?text=Img'">
+                        <span style="font-weight:600; color:var(--text);"><?= htmlspecialchars($r2['TenSP']) ?></span>
+                    </div>
+                </td>
+                <td style="color:var(--cyan);padding:10px; font-weight:bold;"><?= number_format($r2['Gia'],0,',','.') ?>đ</td>
+                <td style="padding:10px; font-weight:bold; color:var(--green);"><?= $r2['SoLuongTon'] ?></td>
                 <td style="text-align:right;padding:10px">
                   <button onclick="openEdit(<?= $r2['MaSP'] ?>)" class="btn" style="padding:6px 14px;background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.3)">✏️ Sửa</button>
                   <form method="post" style="display:inline" onsubmit="return confirm('Xóa sản phẩm này?')"><input type="hidden" name="action" value="delete_product"><input type="hidden" name="MaSP" value="<?= $r2['MaSP'] ?>"><button type="submit" class="btn" style="padding:6px 14px;background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.25)">🗑 Xóa</button></form>
@@ -819,8 +830,7 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
                                     <div style="font-size:12px; font-weight:600;"><?= $mg['DaDung'] ?> <span style="color:var(--muted); font-weight:normal;">/ <?= $mg['SoLanDung'] ?></span></div>
                                     <div style="width:72px; height:5px; background:var(--panel3); border-radius:3px; margin-top:5px; overflow:hidden;"><div style="height:100%; width:<?= $pct ?>%; background:<?= $barColor ?>;"></div></div>
                                 </td>
-                                <td><span style="padding:4px 10px; border-radius:20px; font-size:10px; font-weight:700; text-transform:uppercase; <?= $mg['TrangThai']==1 ? 'background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.22);' : 'background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.22);' ?>"><?= $mg['TrangThai']==1 ? 'Hoạt động' : 'Vô hiệu' ?></span></td>
-                                <td style="text-align:right; white-space:nowrap;">
+<td><span style="white-space: nowrap; padding:4px 10px; border-radius:20px; font-size:10px; font-weight:700; text-transform:uppercase; <?= $mg['TrangThai']==1 ? 'background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.22);' : 'background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.22);' ?>"><?= $mg['TrangThai']==1 ? 'Hoạt động' : 'Vô hiệu' ?></span></td>                                <td style="text-align:right; white-space:nowrap;">
                                     <a href="?toggle_mgg=<?= $mg['MaMGG'] ?>" style="padding:6px 10px; border-radius:7px; text-decoration:none; font-size:11px; <?= $mg['TrangThai']==1 ? 'background:rgba(245,158,11,.1);color:#fbbf24;border:1px solid rgba(245,158,11,.25);' : 'background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.22);' ?>"><?= $mg['TrangThai']==1 ? '⏸' : '▶' ?></a>
                                     <a href="?xoa_mgg=<?= $mg['MaMGG'] ?>" onclick="return confirm('Xóa mã <?= htmlspecialchars($mg['Code']) ?>?')" style="padding:6px 10px; border-radius:7px; text-decoration:none; font-size:11px; background:rgba(239,68,68,.08);color:#f87171;border:1px solid rgba(239,68,68,.2);">🗑</a>
                                 </td>
@@ -858,6 +868,9 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
 
      <div id="t_dh" class="tp">
         <div class="st">📦 Quản lý đơn hàng</div>
+        <div style="margin-bottom: 15px;">
+            <input type="text" id="searchDH" placeholder="🔍 Tìm mã đơn, tên khách, SĐT, trạng thái..." onkeyup="filterAdminTable('searchDH', 'table-dh', 'nav-table-dh')" style="width: 100%; padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel2); color: var(--tx); outline: none; font-family: 'Exo 2';">
+        </div>
         <?php 
           $cntHuy = sqlsrv_query($conn, "SELECT COUNT(*) as cnt FROM DonHang WHERE TrangThai=N'Chờ xác nhận hủy'");
           $soChoHuy = $cntHuy ? (int)(sqlsrv_fetch_array($cntHuy, SQLSRV_FETCH_ASSOC)['cnt'] ?? 0) : 0;
@@ -954,6 +967,9 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
 
      <div id="t_nd" class="tp">
         <div class="st">&#x1F6E1; Quản lý người dùng</div>
+        <div style="margin-bottom: 15px;">
+            <input type="text" id="searchND" placeholder="🔍 Tìm ID, tài khoản, SĐT, tên khách..." onkeyup="filterAdminTable('searchND', 'table-nd', 'nav-table-nd')" style="width: 100%; padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel2); color: var(--tx); outline: none; font-family: 'Exo 2';">
+        </div>
         <div style="overflow-x:auto;">
             <table class="stock-table" id="table-nd">
                 <thead><tr style="color:var(--cyan);"><th style="padding:10px;">ID</th><th style="padding:10px;">Tài Khoản</th><th style="padding:10px;">SĐT</th><th style="padding:10px;">Vai Trò</th><th style="padding:10px; text-align:center;">Trạng Thái</th><th style="padding:10px; text-align:right;">Thao tác</th></tr></thead>
@@ -1011,6 +1027,21 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
         <div class="chat-container" style="display: flex; background: var(--panel2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; height: 500px;">
             <div class="user-list" style="width: 30%; border-right: 1px solid var(--border); background: var(--panel); overflow-y: auto;">
                 <h3 style="padding: 15px; margin: 0; background: rgba(0,229,255,0.1); color: var(--cyan); text-align: center; border-bottom: 1px solid var(--border); font-size: 14px; text-transform: uppercase; position: sticky; top: 0;">Danh sách Chat</h3>
+                <div style="padding:10px; background:var(--panel); position:sticky; top:49px; border-bottom: 1px solid var(--border);">
+                    <input type="text" id="searchChatUser" placeholder="🔍 Tìm tên khách..." onkeyup="filterChat()" style="width:100%; padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--panel2); color:var(--text); outline:none; font-size:13px;">
+                </div>
+                
+                <script>
+                // Hàm lọc người dùng trong danh sách chat
+                function filterChat() {
+                    let val = document.getElementById('searchChatUser').value.toLowerCase();
+                    let items = document.querySelectorAll('.user-item');
+                    items.forEach(item => {
+                        let name = item.innerText.toLowerCase();
+                        item.style.display = name.includes(val) ? 'block' : 'none';
+                    });
+                }
+                </script>
                 <?php if($stmt_users): while($u = sqlsrv_fetch_array($stmt_users, SQLSRV_FETCH_ASSOC)): ?>
                     <div class="user-item" onclick="openChat(<?= $u['MaND'] ?>, '<?= htmlspecialchars($u['HoTen']) ?>', this)" style="padding: 15px; border-bottom: 1px solid var(--border); cursor: pointer; font-weight: bold; color: var(--tx); transition: 0.2s;">👤 <?= htmlspecialchars($u['HoTen']) ?></div>
                 <?php endwhile; endif; ?>
@@ -1035,14 +1066,20 @@ body { font-family: 'Exo 2', system-ui, sans-serif; background: var(--navy); col
       <div style="font-family:'Orbitron',monospace;font-size:14px;color:var(--cyan)">✏️ CHỈNH SỬA SP</div>
       <button type="button" onclick="closeEdit()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer">✕</button>
     </div>
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
       <input type="hidden" name="action" value="edit_product">
       <input type="hidden" name="MaSP" id="eMaSP">
       <div class="fg">
         <div class="fi full"><label>Tên SP *</label><input type="text" name="TenSP" id="eTenSP" required></div>
+        
+        <div class="fi full">
+            <label>Đổi Ảnh Sản Phẩm (Bỏ trống nếu không đổi ảnh)</label>
+            <input type="file" name="HinhAnhEdit" accept="image/*" style="padding:7px; background:var(--panel);">
+        </div>
+        
         <div class="fi"><label>Danh mục</label><select name="MaDM" id="eMaDM" onchange="toggleSpecs(this.value, 'e-')"><option value="1">Laptop</option><option value="2">Điện thoại</option><option value="3">PC Gaming</option><option value="4">Phụ Kiện</option><option value="5">Gaming Gear</option></select></div>
         <div class="fi"><label>Giá</label><input type="number" name="Gia" id="eGia" required></div>
-        <div class="fi"><label>Tồn kho</label><input type="number" name="SoLuongTon" id="eSoLuong"></div>
+        
         <div id="e-grp-dientu" style="display:contents;"><div class="fi"><label>CPU</label><input type="text" name="CPU" id="eCPU"></div><div class="fi"><label>RAM</label><input type="text" name="RAM" id="eRAM"></div><div class="fi"><label>Ổ cứng</label><input type="text" name="O_Cung" id="eOCung"></div><div class="fi"><label>Màn hình</label><input type="text" name="ManHinh" id="eManHinh"></div></div>
         <div id="e-grp-laptop" style="display:contents;"><div class="fi"><label>VGA</label><input type="text" name="VGA" id="eVGA"></div></div>
         <div id="e-grp-phone" style="display:none;"><div class="fi"><label>Camera</label><input type="text" name="Camera" id="eCamera"></div><div class="fi"><label>Pin</label><input type="text" name="Pin" id="ePin"></div></div>
@@ -1076,31 +1113,65 @@ function sw(name, btn) {
 function swn(name){ const btn = document.querySelector('.tb[onclick*="'+name+'"]') || document.querySelector('.ni[onclick*="'+name+'"]'); if(btn) sw(name, btn); }
 
 // CHAT AJAX
+let lastAdminChatData = "";
 var chatInterval;
+
 function openChat(khachId, khachTen, element) {
     $('.user-item').css({'background': 'transparent', 'border-left': 'none'});
     $(element).css({'background': 'rgba(0,229,255,0.1)', 'border-left': '4px solid var(--cyan)'});
     $('#chat-header-title').text('Đang chat với: ' + khachTen);
     $('#current-khach-id').val(khachId);
     $('#no-chat-selected').hide(); $('#chat-content').show(); $('#chat-input-box').css('display', 'flex');
-    clearInterval(chatInterval); loadAdminMessages(); chatInterval = setInterval(loadAdminMessages, 2000);
+    
+    clearInterval(chatInterval); 
+    loadAdminMessages(true); 
+    chatInterval = setInterval(function(){ loadAdminMessages(false); }, 2000);
 }
-function loadAdminMessages() {
+
+function loadAdminMessages(forceScroll = false) {
     var khachId = $('#current-khach-id').val();
     if(khachId !== "") {
-        $.ajax({ url: "admin_load_messages.php", type: "GET", data: { id_khach: khachId }, success: function(data) {
-            var chatBox = $("#chat-content"); var isAtBottom = chatBox[0].scrollHeight - chatBox[0].clientHeight <= chatBox[0].scrollTop + 20;
-            chatBox.html(data); if(isAtBottom) { chatBox.scrollTop(chatBox[0].scrollHeight); }
-        }});
+        $.ajax({ 
+            url: "admin_load_messages.php", 
+            type: "GET", 
+            data: { id_khach: khachId }, 
+            success: function(data) {
+                var chatBox = document.getElementById("chat-content"); 
+                var isNearBottom = false;
+                if(chatBox) {
+                    // Nhạy hơn: Nếu thanh cuộn cách đáy < 150px thì coi như ở đáy
+                    isNearBottom = (chatBox.scrollHeight - chatBox.clientHeight) <= (chatBox.scrollTop + 150);
+                }
+
+                // Phát hiện có tin nhắn mới
+                let isNewMessage = (lastAdminChatData !== "" && lastAdminChatData !== data);
+                lastAdminChatData = data;
+                
+                $("#chat-content").html(data); 
+                
+                if(forceScroll || isNewMessage || isNearBottom) { 
+                    setTimeout(function(){
+                        if(chatBox) chatBox.scrollTop = chatBox.scrollHeight + 1000;
+                    }, 50);
+                }
+            }
+        });
     }
 }
+
 function sendAdminMsg() {
-    var khachId = $('#current-khach-id').val(); var msg = $('#txt-admin-msg').val();
+    var khachId = $('#current-khach-id').val(); 
+    var msg = $('#txt-admin-msg').val();
     if(msg.trim() !== "" && khachId !== "") {
-        $.ajax({ url: "admin_send_message.php", type: "POST", data: { id_khach: khachId, noidung: msg }, success: function() {
-            $('#txt-admin-msg').val(''); loadAdminMessages();
-            setTimeout(function(){ var chatBox = $("#chat-content"); chatBox.scrollTop(chatBox[0].scrollHeight); }, 100);
-        }});
+        $.ajax({ 
+            url: "admin_send_message.php", 
+            type: "POST", 
+            data: { id_khach: khachId, noidung: msg }, 
+            success: function() {
+                $('#txt-admin-msg').val(''); 
+                loadAdminMessages(true); 
+            }
+        });
     }
 }
 function handleEnter(e) { if(e.keyCode === 13) sendAdminMsg(); }
@@ -1119,15 +1190,29 @@ function toggleSpecs(maDM, prefix) {
 const spData = <?php $allSP = sqlsrv_query($conn, "SELECT * FROM SanPham"); $arr = []; if ($allSP) { while($r = sqlsrv_fetch_array($allSP, SQLSRV_FETCH_ASSOC)) $arr[$r['MaSP']] = $r; } echo json_encode($arr); ?>;
 function openEdit(id) {
     const sp = spData[id]; if (!sp) return;
-    document.getElementById('eMaSP').value = sp.MaSP; document.getElementById('eTenSP').value = sp.TenSP; document.getElementById('eMaDM').value = sp.MaDM;
+    document.getElementById('eMaSP').value = sp.MaSP; 
+    document.getElementById('eTenSP').value = sp.TenSP; 
+    document.getElementById('eMaDM').value = sp.MaDM;
     toggleSpecs(sp.MaDM, 'e-'); 
-    document.getElementById('eGia').value = sp.Gia; document.getElementById('eSoLuong').value = sp.SoLuongTon;
-    document.getElementById('eCPU').value = sp.CPU || ''; document.getElementById('eRAM').value = sp.RAM || '';
-    document.getElementById('eOCung').value = sp.O_Cung || ''; document.getElementById('eManHinh').value = sp.ManHinh || '';
-    document.getElementById('eVGA').value = sp.VGA || ''; document.getElementById('eCamera').value = sp.Camera || '';
-    document.getElementById('ePin').value = sp.Pin || ''; document.getElementById('eKetNoi').value = sp.KetNoi || '';
-    document.getElementById('eTuongThich').value = sp.TuongThich || ''; document.getElementById('eBaoHanh').value = sp.BaoHanh || '';
-    document.getElementById('eMoTa').value = sp.MoTa || ''; document.getElementById('editModal').style.display = 'flex';
+    document.getElementById('eGia').value = sp.Gia; 
+    
+    // Reset ô File ảnh để không bị dính file cũ lúc sửa sản phẩm khác
+    const fileInput = document.querySelector('input[name="HinhAnhEdit"]');
+    if (fileInput) fileInput.value = '';
+    
+    document.getElementById('eCPU').value = sp.CPU || ''; 
+    document.getElementById('eRAM').value = sp.RAM || '';
+    document.getElementById('eOCung').value = sp.O_Cung || ''; 
+    document.getElementById('eManHinh').value = sp.ManHinh || '';
+    document.getElementById('eVGA').value = sp.VGA || ''; 
+    document.getElementById('eCamera').value = sp.Camera || '';
+    document.getElementById('ePin').value = sp.Pin || ''; 
+    document.getElementById('eKetNoi').value = sp.KetNoi || '';
+    document.getElementById('eTuongThich').value = sp.TuongThich || ''; 
+    document.getElementById('eBaoHanh').value = sp.BaoHanh || '';
+    document.getElementById('eMoTa').value = sp.MoTa || ''; 
+    
+    document.getElementById('editModal').style.display = 'flex';
 }
 function closeEdit() { document.getElementById('editModal').style.display = 'none'; }
 function updateProductImage(id) {
@@ -1259,7 +1344,30 @@ function paginateList(containerId, itemSelector, rowsPerPage) {
 
     showPage(1);
 }
-
+// --- HÀM TÌM KIẾM THÔNG MINH CHO ADMIN ---
+function filterAdminTable(inputId, tableId, navId) {
+    let val = document.getElementById(inputId).value.toLowerCase();
+    let rows = document.querySelectorAll('#' + tableId + ' tbody tr');
+    let nav = document.getElementById(navId);
+    
+    // Nếu xóa rỗng ô tìm kiếm -> Trả lại phân trang ban đầu
+    if (val.trim() === '') {
+        if(nav) nav.style.display = 'flex';
+        // Bấm tự động vào trang 1 để reset lại view
+        let firstBtn = nav ? nav.querySelector('button[data-page="1"]') : null;
+        if(firstBtn) firstBtn.click();
+        return;
+    }
+    
+    // Đang tìm kiếm -> Ẩn thanh phân trang đi
+    if(nav) nav.style.display = 'none';
+    
+    // Lọc các dòng: Chữ nào khớp thì hiện, không thì ẩn
+    rows.forEach(row => {
+        let text = row.innerText.toLowerCase();
+        row.style.display = text.includes(val) ? '' : 'none';
+    });
+}
 // KHỞI CHẠY PHÂN TRANG CHO TOÀN BỘ CÁC TAB
 window.addEventListener('DOMContentLoaded', () => {
     // Phân trang Đơn Hàng Của Khách (6 đơn/trang)
@@ -1307,3 +1415,4 @@ function openChiTietTraHang(btn) {
 </body>
 </html>
 <?php sqlsrv_close($conn); ?>
+không hiểu sao có lúc nó kéo có lúc nó lỗi không kéo mệt quá thôi cho tôi code khi nó có tin nhắn mới cho nó thông báo số lượng có tin nhắn trên nút chat được không  người ta ấn vô mất số lượng là ok đỡ lỗi lười quá ròi
