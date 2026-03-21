@@ -367,3 +367,11 @@ GO
 USE QLBanHang;
 GO
 ALTER TABLE NguoiDung ADD XuTichLuy INT DEFAULT 0;
+
+--thêm xu
+--thêm xu
+--thêm xu
+--thêm xu
+--thêm xu
+--thêm xu
+GO

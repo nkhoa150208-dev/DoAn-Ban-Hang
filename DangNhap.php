@@ -53,13 +53,13 @@ session_start();
 
 <?php
 if (isset($_POST['login'])) {
-
     include "config.php";
 
     $TenDangNhap = $_POST['txtTaiKhoan'];
     $MatKhau     = $_POST['txtMatKhau'];
 
-    $sql = "SELECT MaND, TenDangNhap, HoTen, VaiTro
+    // THÊM CỘT TrangThai VÀO TRONG CÂU SELECT
+    $sql = "SELECT MaND, TenDangNhap, HoTen, VaiTro, TrangThai
             FROM NguoiDung
             WHERE TenDangNhap = ? AND MatKhau = ?";
 
@@ -70,30 +70,26 @@ if (isset($_POST['login'])) {
         die(print_r(sqlsrv_errors(), true));
     }
 
+    // CHỈ GỌI FETCH 1 LẦN DUY NHẤT VÀ LƯU VÀO BIẾN $row
     if ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-    // THÊM ĐOẠN NÀY ĐỂ KIỂM TRA KHÓA
-    if ($row['TrangThai'] == 0) {
-        echo '<p class="saithontinh">Tài khoản này đã bị vô hiệu hóa!</p>';
+        
+        // BƯỚC 1: KIỂM TRA XEM TÀI KHOẢN CÓ BỊ KHÓA KHÔNG
+        if ($row['TrangThai'] == 0) {
+            echo '<p class="saithontinh">Tài khoản này đã bị vô hiệu hóa!</p>';
+        } 
+        // BƯỚC 2: NẾU KHÔNG BỊ KHÓA THÌ CHO PHÉP ĐĂNG NHẬP VÀ LƯU SESSION
+        else {
+            $_SESSION['MaND']        = $row['MaND'];
+            $_SESSION['TenDangNhap'] = $row['TenDangNhap'];
+            $_SESSION['HoTen']       = $row['HoTen'];
+            $_SESSION['VaiTro']      = $row['VaiTro'];
+
+            header("Location: MK3LOP.php");
+            exit;
+        }
+        
     } else {
-        // Code lưu Session cho đăng nhập thành công cũ của bạn giữ nguyên ở đây
-        $_SESSION['MaND']        = $row['MaND'];
-        $_SESSION['TenDangNhap'] = $row['TenDangNhap'];
-        // ...
-        header("Location: MK3LOP.php");
-        exit;
-    }
-}
-    if ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-
-        $_SESSION['MaND']        = $row['MaND'];
-        $_SESSION['TenDangNhap'] = $row['TenDangNhap'];
-        $_SESSION['HoTen']       = $row['HoTen'];
-        $_SESSION['VaiTro']      = $row['VaiTro'];
-
-        header("Location: MK3LOP.php");
-        exit;
-
-    } else {
+        // NẾU TÌM KHÔNG THẤY TÀI KHOẢN TRONG DATABASE -> SAI TÊN ĐĂNG NHẬP / MẬT KHẨU
         echo '<p class="saithontinh">Sai tài khoản hoặc mật khẩu</p>';
     }
 }

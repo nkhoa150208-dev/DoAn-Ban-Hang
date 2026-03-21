@@ -1323,9 +1323,8 @@ updateCountdown();
 
 <script src="js/trangchu.js"></script>
 <?php 
-// CHỈ HIỂN THỊ KHUNG CHAT NẾU TÀI KHOẢN KHÔNG PHẢI LÀ "admin"
-if (isset($_SESSION['TenDangNhap']) && $_SESSION['TenDangNhap'] !== 'admin') { 
-?>
+// CHỈ HIỂN THỊ KHUNG CHAT NẾU LÀ KHÁCH HÀNG (Tránh lỗi trùng lặp khung Chat với Admin)
+if (isset($_SESSION['VaiTro']) && $_SESSION['VaiTro'] == 0) {?>
 
    
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -1361,132 +1360,135 @@ if (isset($_SESSION['TenDangNhap']) && $_SESSION['TenDangNhap'] !== 'admin') {
 </style>
 
 <div id="chat-box">
-    <div id="chat-header" onclick="toggleChat()">💬 Trò chuyện với Admin</div>
-    <div id="chat-body" style="display: none;">
-        <div id="chat-content">
-            </div>
-        <div id="chat-input-area">
-            <input type="text" id="txt-message" placeholder="Nhập tin nhắn..." onkeypress="handleKeyPress(event)">
-            <button id="btn-send" onclick="sendMessage()">Gửi</button>
+    <div id="chat-header" onclick="toggleChat()">
+        💬 Trò chuyện với Shop 
+        <span id="unread-badge" style="background: #ef4444; color: white; border-radius: 20px; padding: 2px 7px; font-size: 11px; margin-left: 5px; display: none; box-shadow: 0 0 5px rgba(239,68,68,0.5);">Mới</span>
+    </div>
+    <div id="chat-body" style="display: none; flex-direction: column;">
+        
+        <div id="chat-content" style="height: 300px; overflow-y: auto; padding: 10px; background: #fafafa; display: flex; flex-direction: column; gap: 5px;"></div> 
+
+        <div id="chat-quick-replies" style="padding: 10px; background: #fff; border-top: 1px solid #ddd; display: flex; flex-wrap: wrap; gap: 5px;">
+            <div style="width: 100%; font-size: 12px; color: #666; margin-bottom: 5px;">🤖 Trợ lý ảo: Chọn vấn đề cần hỗ trợ:</div>
+            <button onclick="sendBot('Chính sách bảo hành như thế nào?')" style="background:#f0f4f8; border:1px solid #cce; padding:6px 10px; border-radius:15px; font-size:12px; cursor:pointer; color:#007bff; transition:0.2s;">🛡 Bảo hành</button>
+            <button onclick="sendBot('Cho tôi hỏi về thời gian giao hàng?')" style="background:#f0f4f8; border:1px solid #cce; padding:6px 10px; border-radius:15px; font-size:12px; cursor:pointer; color:#007bff; transition:0.2s;">🚚 Giao hàng</button>
+            <button onclick="sendBot('Tôi muốn hỏi vấn đề khác')" style="background:#ffefe5; border:1px solid #fcdcb3; padding:6px 10px; border-radius:15px; font-size:12px; cursor:pointer; color:#f97316; font-weight:bold; width:100%; text-align:left;">🙋‍♂️ Gặp nhân viên tư vấn</button>
+        </div>
+
+        <div id="chat-input-area" style="display: none; padding: 10px; border-top: 1px solid #ddd;">
+            <input type="text" id="txt-message" placeholder="Nhập tin nhắn cho Admin..." onkeypress="handleKeyPress(event)" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 5px; outline: none;">
+            <button id="btn-send" onclick="sendMessage()" style="background: #007bff; color: white; border: none; padding: 8px 15px; margin-left: 5px; border-radius: 5px; cursor: pointer; font-weight: bold;">Gửi</button>
         </div>
     </div>
 </div>
 
 <script>
-    // Hàm Thu gọn / Mở rộng khung chat
+    let lastChatData = "";
+
     function toggleChat() {
-        $("#chat-body").slideToggle();
+        $("#chat-body").slideToggle(300, function() {
+            if ($(this).is(':visible')) {
+                sessionStorage.setItem('trangThaiChat', 'mo');
+                $("#unread-badge").hide(); // Tắt huy hiệu Mới khi mở hộp thoại
+                scrollChatToBottom();
+            } else {
+                sessionStorage.setItem('trangThaiChat', 'dong');
+            }
+        });
     }
 
-    // Hàm tải tin nhắn từ Database lên
-    function loadMessages() {
+    function scrollChatToBottom() {
+        var chatBox = document.getElementById("chat-content");
+        if (chatBox) chatBox.scrollTop = chatBox.scrollHeight + 1000;
+    }
+
+    function sendBot(text) {
+        let reply = "";
+        let isTransfer = false;
+        
+        if (text === 'Tôi muốn hỏi vấn đề khác') {
+            isTransfer = true;
+            reply = "Đã kết nối! Bạn vui lòng nhắn yêu cầu, nhân viên sẽ trả lời trong chốc lát nhé! 😊";
+        } else {
+            if (text.includes('bảo hành')) reply = "Cảm ơn bạn! Mọi sản phẩm tại KON TechVN đều được bảo hành chính hãng từ 12 - 36 tháng. Lỗi 1 đổi 1 trong 30 ngày nhé ạ.";
+            if (text.includes('giao hàng')) reply = "Shop miễn phí giao hàng cho đơn trên 500k. Nội thành HCM nhận trong 2H, các tỉnh khác từ 2-3 ngày ạ.";
+        }
+
+        $.ajax({
+            url: "send_message.php", type: "POST", data: { noidung: text },
+            success: function() {
+                $.ajax({
+                    url: "send_message.php", type: "POST", data: { noidung: "🤖 Bot: " + reply },
+                    success: function() { loadMessages(true); }
+                });
+            }
+        });
+
+        if (isTransfer) {
+            $("#chat-quick-replies").slideUp(); 
+            $("#chat-input-area").css('display', 'flex'); 
+        }
+    }
+
+    function loadMessages(forceScroll = false) {
         $.ajax({
             url: "load_messages.php",
             type: "GET",
             success: function(data) {
-                var chatContent = $("#chat-content");
-                // Kiểm tra xem thanh cuộn có đang ở dưới cùng không
-                var isScrolledToBottom = chatContent[0].scrollHeight - chatContent[0].clientHeight <= chatContent[0].scrollTop + 20;
+                var chatBox = document.getElementById("chat-content");
+                var isNearBottom = false;
+                if(chatBox) {
+                    isNearBottom = (chatBox.scrollHeight - chatBox.clientHeight) <= (chatBox.scrollTop + 150);
+                }
                 
-                chatContent.html(data); // Đổ dữ liệu vào khung
+                let isNewMessage = (lastChatData !== "" && lastChatData !== data);
+                lastChatData = data; 
                 
-                // Nếu đang ở dưới cùng thì tự cuộn xuống khi có tin nhắn mới
-                if(isScrolledToBottom) {
-                    chatContent.scrollTop(chatContent[0].scrollHeight);
+                $("#chat-content").html(data);
+                
+                $("#chat-content").children().each(function() {
+                    let txt = $(this).text();
+                    if (txt.includes("🤖 Bot:")) {
+                        $(this).css({"text-align": "left", "justify-content": "flex-start", "display": "flex", "width": "100%"});
+                        $(this).find("*").css({"background-color": "#e9ecef", "color": "#333"});
+                    }
+                });
+
+                // NẾU CÓ TIN NHẮN MỚI TỪ ADMIN MÀ KHÁCH ĐANG ĐÓNG HỘP CHAT -> BẬT CHỮ "MỚI" ĐỎ
+                if (isNewMessage && !$("#chat-body").is(":visible")) {
+                    $("#unread-badge").show();
+                }
+                
+                if(forceScroll || (isNewMessage && $("#chat-body").is(":visible")) || isNearBottom) {
+                    setTimeout(scrollChatToBottom, 100); 
                 }
             }
         });
     }
 
-    // Hàm Gửi tin nhắn
     function sendMessage() {
         var message = $("#txt-message").val();
         if(message.trim() !== "") {
             $.ajax({
-                url: "send_message.php",
-                type: "POST",
-                data: { noidung: message },
+                url: "send_message.php", type: "POST", data: { noidung: message },
                 success: function() {
-                    $("#txt-message").val(""); // Xóa trắng ô nhập
-                    loadMessages(); // Tải lại tin nhắn ngay lập tức
-                    
-                    // Bắt buộc cuộn xuống dưới cùng sau khi gửi
-                    setTimeout(function(){
-                        var chatContent = $("#chat-content");
-                        chatContent.scrollTop(chatContent[0].scrollHeight);
-                    }, 100);
+                    $("#txt-message").val(""); 
+                    loadMessages(true); 
                 }
             });
         }
     }
 
-    function themVaoGio(maSP, buttonElement) {
-    if(!buttonElement) return;
+    function handleKeyPress(e) { if(e.keyCode === 13) sendMessage(); }
 
-    $.ajax({
-        url: "them_gio_hang.php",
-        type: "POST",
-        data: { id_sanpham: maSP },
-        success: function(response) {
-            if (response.trim() === "VUOT_QUY_DINH") {
-                alert("⚠️ SỐ LƯỢNG ĐẠT GIỚI HẠN!\nKho không đủ sản phẩm.");
-                return;
-            }
-
-            // 1. Lấy con số trả về
-            let soLuongMoi = parseInt(response);
-            
-            // 2. Tìm thẻ badge
-            let badge = $("#so-luong-gio-hang");
-
-            // 3. Cập nhật số và HIỆN THỊ nếu > 0
-            if (soLuongMoi > 0) {
-                badge.text(soLuongMoi);
-                badge.css("display", "flex"); // Ép nó hiện ra lại
-            } else {
-                badge.css("display", "none");
-            }
-
-            // Hiệu ứng đổi màu nút của bạn
-            let oldText = buttonElement.innerHTML;
-            buttonElement.innerHTML = '✓ Đã thêm!';
-            let originalBg = buttonElement.style.background;
-            buttonElement.style.background = '#059669'; 
-            
-            setTimeout(() => { 
-                buttonElement.innerHTML = oldText; 
-                buttonElement.style.background = originalBg; 
-            }, 1500);
-        },
-        error: function() {
-            alert("Lỗi AJAX!");
-        }
-    });
-}
-
-
-    // Ấn Enter để gửi thay vì bấm nút
-    function handleKeyPress(e) {
-        if(e.keyCode === 13) {
-            sendMessage();
-        }
-    }
-
-    // Khi trang web vừa tải xong:
     $(document).ready(function(){
-        loadMessages(); // Load tin nhắn lần đầu
-        
-        // Cứ mỗi 2 giây lại ngầm chạy hàm loadMessages() 1 lần để quét tin nhắn mới
-        setInterval(loadMessages, 2000); 
-        
-        // Cuộn xuống dưới cùng lúc mới mở
-        setTimeout(function(){
-            var chatContent = $("#chat-content");
-            chatContent.scrollTop(chatContent[0].scrollHeight);
-        }, 500);
+        if (sessionStorage.getItem('trangThaiChat') === 'mo') {
+            $("#chat-body").show();
+        }
+        loadMessages(true); 
+        setInterval(function() { loadMessages(false); }, 2000); 
     });  
 </script>
-
     <?php 
 } // Dòng này khóa cái lệnh if lại
 ?>
